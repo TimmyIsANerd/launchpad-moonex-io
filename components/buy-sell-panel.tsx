@@ -188,7 +188,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <TabsTrigger
                     value="buy"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white w-full"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground w-full"
                   >
                     Buy
                   </TabsTrigger>
@@ -196,7 +196,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <TabsTrigger
                     value="sell"
-                    className="data-[state=active]:bg-red-500 data-[state=active]:text-white w-full"
+                    className="data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground w-full"
                   >
                     Sell
                   </TabsTrigger>
@@ -232,7 +232,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                       </motion.div>
 
                       <motion.div
-                        className="flex space-x-2"
+                        className="grid grid-cols-3 gap-2"
                         variants={staggerContainer}
                         initial="hidden"
                         animate="visible"
@@ -246,10 +246,10 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                               animate={activePreset === preset ? { scale: [1, 1.1, 1] } : {}}
                             >
                               <Button
-                                variant="outline"
+                                variant="default"
                                 size="sm"
                                 onClick={() => handleBuyPreset(preset)}
-                                className="flex-1 text-xs border-border hover:bg-primary/10 hover:border-primary/20"
+                                className="w-full text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
                               >
                                 {preset} BNB
                               </Button>
@@ -357,7 +357,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                       </motion.div>
 
                       <motion.div
-                        className="flex space-x-2"
+                        className="grid grid-cols-4 gap-2"
                         variants={staggerContainer}
                         initial="hidden"
                         animate="visible"
@@ -371,10 +371,10 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                               animate={activePreset === preset.toString() ? { scale: [1, 1.1, 1] } : {}}
                             >
                               <Button
-                                variant="outline"
+                                variant="default"
                                 size="sm"
                                 onClick={() => handleSellPreset(preset)}
-                                className="flex-1 text-xs border-border hover:bg-primary/10 hover:border-primary/20"
+                                className="w-full text-xs bg-accent hover:bg-accent/90 text-accent-foreground"
                               >
                                 {preset}%
                               </Button>
