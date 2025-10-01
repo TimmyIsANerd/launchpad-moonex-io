@@ -1,0 +1,9 @@
+{
+  "abi": [
+    { "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }], "stateMutability": "nonpayable", "type": "constructor" },
+    { "inputs": [], "name": "FailedDeployment", "type": "error" },
+    { "inputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "symbol", "type": "string" }, { "internalType": "bytes32", "name": "salt", "type": "bytes32" }], "name": "deployToken", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+    { "inputs": [{ "internalType": "bytes32", "name": "salt", "type": "bytes32" }], "name": "predictAddress", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "metadataRegistry", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }
+  ]
+}

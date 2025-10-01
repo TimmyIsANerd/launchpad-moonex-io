@@ -1,0 +1,8 @@
+{
+  "MoonExFactory": { "abi": [] },
+  "BondingCurveLaunch": { "abi": [] },
+  "MoonToken": { "abi": [] },
+  "LiquidityManager": { "abi": [] },
+  "LPLocker": { "abi": [] },
+  "MetadataRegistry": { "abi": [] }
+}

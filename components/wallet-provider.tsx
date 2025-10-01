@@ -1,15 +1,17 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useMemo, type ReactNode } from "react"
+import { useAccount, useBalance, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi"
+import { config, riseTestnet } from "@/lib/wagmi"
 
 interface WalletContextType {
   isConnected: boolean
   address: string | null
   balance: {
-    bnb: string
-    usdt: string
+    bnb: string // native balance; UI keeps "BNB" label for now as requested
+    usdt: string // placeholder until USDT integration
   }
-  connect: () => Promise<void>
+  connect: (walletId?: string) => Promise<void>
   disconnect: () => void
   switchNetwork: () => Promise<void>
   isCorrectNetwork: boolean
@@ -30,81 +32,55 @@ interface WalletProviderProps {
 }
 
 export function WalletProvider({ children }: WalletProviderProps) {
-  const [isConnected, setIsConnected] = useState(false)
-  const [address, setAddress] = useState<string | null>(null)
-  const [balance, setBalance] = useState({
-    bnb: "0.00",
-    usdt: "0.00",
+  const { address, isConnected } = useAccount()
+  const chainId = useChainId()
+  const { disconnectAsync } = useDisconnect()
+  const { switchChainAsync } = useSwitchChain()
+  const { connectors, connectAsync, status: connectStatus } = useConnect()
+  const { data: nativeBal } = useBalance({
+    chainId,
+    address,
+    query: { enabled: !!address && !!chainId },
   })
-  const [isCorrectNetwork, setIsCorrectNetwork] = useState(true)
 
-  // Simulate wallet connection
-  const connect = async () => {
-    try {
-      // In a real app, this would use wagmi/RainbowKit or similar
-      // Simulate connection delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+  const balance = useMemo(
+    () => ({
+      bnb: nativeBal ? parseFloat(nativeBal.formatted).toFixed(4) : "0.00",
+      usdt: "0.00",
+    }),
+    [nativeBal]
+  )
 
-      // Simulate successful connection
-      const mockAddress = "0x1234567890abcdef1234567890abcdef12345678"
-      setAddress(mockAddress)
-      setIsConnected(true)
+  const isCorrectNetwork = chainId === riseTestnet.id
 
-      // Simulate fetching balance
-      setBalance({
-        bnb: "2.45",
-        usdt: "1,250.00",
-      })
+  const connect = async (walletId?: string) => {
+    const pickInjected = () => connectors.find((c) => c.type === "injected" || c.id === "injected")
+    const pickWalletConnect = () => connectors.find((c) => c.id === "walletConnect" || c.name.includes("WalletConnect"))
 
-      // Store in localStorage for persistence
-      localStorage.setItem("wallet_connected", "true")
-      localStorage.setItem("wallet_address", mockAddress)
-    } catch (error) {
-      console.error("Failed to connect wallet:", error)
-      throw error
-    }
+    const target = ((): any => {
+      const id = (walletId || "").toLowerCase()
+      if (id === "walletconnect") return pickWalletConnect()
+      if (id === "metamask" || id === "binance" || id === "trustwallet") return pickInjected() || pickWalletConnect()
+      // fallback: try injected first, else walletconnect
+      return pickInjected() || pickWalletConnect()
+    })()
+
+    if (!target) throw new Error("No suitable connector found")
+
+    await connectAsync({ connector: target, chainId: riseTestnet.id })
   }
 
   const disconnect = () => {
-    setIsConnected(false)
-    setAddress(null)
-    setBalance({
-      bnb: "0.00",
-      usdt: "0.00",
-    })
-    localStorage.removeItem("wallet_connected")
-    localStorage.removeItem("wallet_address")
+    return disconnectAsync()
   }
 
   const switchNetwork = async () => {
-    try {
-      // Simulate network switch
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      setIsCorrectNetwork(true)
-    } catch (error) {
-      console.error("Failed to switch network:", error)
-      throw error
-    }
+    await switchChainAsync({ chainId: riseTestnet.id })
   }
 
-  // Check for existing connection on mount
-  useEffect(() => {
-    const wasConnected = localStorage.getItem("wallet_connected")
-    const storedAddress = localStorage.getItem("wallet_address")
-
-    if (wasConnected && storedAddress) {
-      setIsConnected(true)
-      setAddress(storedAddress)
-      setBalance({
-        bnb: "2.45",
-        usdt: "1,250.00",
-      })
-    }
-  }, [])
-
   const value: WalletContextType = {
-    isConnected,
-    address,
+    isConnected: !!isConnected,
+    address: address ?? null,
     balance,
     connect,
     disconnect,

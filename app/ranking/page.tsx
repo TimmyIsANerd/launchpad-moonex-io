@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { TokenTable } from "@/components/token-table"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, Volume2, Clock } from "lucide-react"
+import { useTokens } from "@/src/hooks/useTokens"
 
 // Sample ranking data
 const marketCapTokens = [
@@ -133,6 +134,42 @@ const volumeTokens = [
 export default function RankingPage() {
   const [activeTab, setActiveTab] = useState<"marketcap" | "volume">("marketcap")
   const [lastUpdated] = useState(new Date())
+  const { data: tokens } = useTokens(200, 0)
+
+  const marketCapTokens = useMemo(() => {
+    const rows = (tokens || [])
+      .sort((a, b) => (b.holdersCount || 0) - (a.holdersCount || 0))
+      .map((t, i) => ({
+        rank: i + 1,
+        name: t.displayName || t.name,
+        ticker: t.symbol,
+        baseAsset: "BNB",
+        marketCap: t.isComplete ? "—" : "$5,000",
+        price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
+        change24h: 0,
+        contractAddress: t.id,
+        onPancakeSwap: !!t.isComplete,
+      }))
+    return rows.slice(0, 50)
+  }, [tokens])
+
+  const volumeTokens = useMemo(() => {
+    const rows = (tokens || [])
+      .sort((a, b) => Number(b.volume24hBase || 0) - Number(a.volume24hBase || 0))
+      .map((t, i) => ({
+        rank: i + 1,
+        name: t.displayName || t.name,
+        ticker: t.symbol,
+        baseAsset: "BNB",
+        marketCap: t.isComplete ? "—" : "$5,000",
+        volume24h: t.volume24hBase != null ? `${Number(t.volume24hBase).toFixed(2)} BNB` : "—",
+        price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
+        change24h: 0,
+        contractAddress: t.id,
+        onPancakeSwap: !!t.isComplete,
+      }))
+    return rows.slice(0, 50)
+  }, [tokens])
 
   return (
     <div className="min-h-screen bg-background">

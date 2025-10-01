@@ -4,6 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge"
 import { Copy, ExternalLink, LogOut, Settings, ChevronDown } from "lucide-react"
 import { useWallet } from "@/components/wallet-provider"
+import { toast } from "sonner"
 
 export function WalletDropdown() {
   const { address, balance, disconnect, isCorrectNetwork, switchNetwork } = useWallet()
@@ -11,7 +12,7 @@ export function WalletDropdown() {
   const copyAddress = () => {
     if (address) {
       navigator.clipboard.writeText(address)
-      alert("Address copied to clipboard!")
+      toast.success("Address copied to clipboard!")
     }
   }
 
@@ -20,7 +21,7 @@ export function WalletDropdown() {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
@@ -33,7 +34,13 @@ export function WalletDropdown() {
           </div>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 bg-card border-border" align="end">
+      <DropdownMenuContent
+        className="w-80 bg-card border border-border z-[10000] ring-1 ring-accent/30"
+        align="end"
+        side="bottom"
+        sideOffset={8}
+        collisionPadding={12}
+      >
         {/* Wallet Info */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-2">
@@ -47,7 +54,7 @@ export function WalletDropdown() {
               </Button>
             </div>
           </div>
-          <p className="font-mono text-sm text-foreground">{address}</p>
+          <p className="font-mono text-sm text-foreground truncate">{address}</p>
         </div>
 
         {/* Network Status */}
@@ -74,10 +81,6 @@ export function WalletDropdown() {
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">BNB</span>
               <span className="font-medium text-foreground">{balance.bnb}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">USDT</span>
-              <span className="font-medium text-foreground">{balance.usdt}</span>
             </div>
           </div>
         </div>

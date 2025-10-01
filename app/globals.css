@@ -127,6 +127,16 @@
 }
 
 /* MoonEx brand utility classes */
+/* Hide number input spin buttons globally (for browsers that still show them) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 @layer utilities {
   .gradient-cosmic {
     background: linear-gradient(135deg, #00c0ff 0%, #ff00a0 100%);

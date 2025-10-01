@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Shield, Zap, Clock, TrendingUp, Flame, GraduationCap } from "lucide-react"
+import { useTokens } from "@/src/hooks/useTokens"
+import { useBnbUsd } from "@/src/hooks/useBnbUsd"
+import { formatUSD } from "@/lib/format"
 
 // Sample token data for different categories
 const newlyCreatedTokens = [
@@ -91,20 +94,98 @@ export default function AdvancedPage() {
   )
   const [mevProtection, setMevProtection] = useState(false)
   const [quickBuyAmount, setQuickBuyAmount] = useState("")
-  const [currentBnbPrice] = useState("$645.32")
+  const { data: bnbUsd } = useBnbUsd()
+  const { data: tokens } = useTokens(200, 0)
+
+  const now = Date.now()
+  const newlyCreatedTokensLive = useMemo(() => {
+    return (tokens || [])
+      .filter((t) => now - t.createdAt <= 6 * 60 * 60 * 1000)
+      .filter((t) => !t.isComplete)
+      .map((t, idx) => ({
+        rank: idx + 1,
+        name: t.displayName || t.name,
+        ticker: t.symbol,
+        baseAsset: "BNB",
+        marketCap: "$5K (cosmetic)",
+        price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
+        change24h: 0,
+        contractAddress: t.id,
+        onPancakeSwap: !!t.isComplete,
+        timeSinceLaunch: "new",
+      }))
+  }, [tokens, now])
+
+  const aboutToLaunchTokensLive = useMemo(() => {
+    // Approximation: use volume as a proxy for nearing threshold when threshold is unknown
+    return (tokens || [])
+      .filter((t) => !t.isComplete)
+      .sort((a, b) => Number(b.volume24hBase || 0) - Number(a.volume24hBase || 0))
+      .slice(0, 20)
+      .map((t, idx) => ({
+        rank: idx + 1,
+        name: t.displayName || t.name,
+        ticker: t.symbol,
+        baseAsset: "BNB",
+        marketCap: "$5K (cosmetic)",
+        price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
+        change24h: 0,
+        contractAddress: t.id,
+        onPancakeSwap: !!t.isComplete,
+        launchTime: "soon",
+      }))
+  }, [tokens])
+
+  const tradingVolumeTokensLive = useMemo(() => {
+    return (tokens || [])
+      .sort((a, b) => Number(b.volume24hBase || 0) - Number(a.volume24hBase || 0))
+      .slice(0, 20)
+      .map((t, idx) => ({
+        rank: idx + 1,
+        name: t.displayName || t.name,
+        ticker: t.symbol,
+        baseAsset: "BNB",
+        marketCap: t.isComplete ? "—" : "$5,000",
+        volume24h: t.volume24hBase != null ? `${Number(t.volume24hBase).toFixed(2)} BNB` : "—",
+        price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
+        change24h: 0,
+        contractAddress: t.id,
+        onPancakeSwap: !!t.isComplete,
+        txCount: undefined,
+      }))
+  }, [tokens])
+
+  const graduatedHotTokensLive = useMemo(() => {
+    return (tokens || [])
+      .filter((t) => t.isComplete)
+      .sort((a, b) => Number(b.volume24hBase || 0) - Number(a.volume24hBase || 0))
+      .slice(0, 20)
+      .map((t, idx) => ({
+        rank: idx + 1,
+        name: t.displayName || t.name,
+        ticker: t.symbol,
+        baseAsset: "BNB",
+        marketCap: "—",
+        price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
+        change24h: 0,
+        contractAddress: t.id,
+        onPancakeSwap: !!t.isComplete,
+        graduatedAt: "—",
+      }))
+  }, [tokens])
 
   const getTabData = () => {
     switch (activeTab) {
       case "newly-created":
-        return newlyCreatedTokens
+        return newlyCreatedTokensLive
       case "about-to-launch":
-        return aboutToLaunchTokens
+        return aboutToLaunchTokensLive
       case "trading-volume":
-        return tradingVolumeTokens
+        return tradingVolumeTokensLive
       case "graduated-hot":
-        return graduatedHotTokens
+        return graduatedHotTokensLive
       default:
-        return newlyCreatedTokens
+        return newlyCreatedTokensLive
     }
   }
 
@@ -177,7 +258,7 @@ export default function AdvancedPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Current BNB Price:</span>
-                    <span className="font-medium text-foreground">{currentBnbPrice}</span>
+                    <span className="font-medium text-foreground">{bnbUsd != null ? formatUSD(bnbUsd, 2) : "—"}</span>
                   </div>
                   <div className="flex space-x-2">
                     <div className="flex-1">

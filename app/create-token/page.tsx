@@ -15,6 +15,7 @@ import { FileUpload } from "@/components/file-upload"
 import { Badge } from "@/components/ui/badge"
 import { useWallet } from "@/components/wallet-provider"
 import { Wallet, Rocket, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
 
 interface TokenFormData {
   logo: File | null
@@ -73,7 +74,7 @@ export default function CreateTokenPage() {
     e.preventDefault()
 
     if (!isConnected) {
-      alert("Please connect your wallet first")
+      toast.error("Please connect your wallet first")
       return
     }
 
@@ -86,7 +87,7 @@ export default function CreateTokenPage() {
     // Simulate token creation
     setTimeout(() => {
       setIsSubmitting(false)
-      alert(`Token ${formData.name} (${formData.ticker}) created successfully!`)
+      toast.success(`Token ${formData.name} (${formData.ticker}) created successfully!`)
       // Reset form
       setFormData({
         logo: null,

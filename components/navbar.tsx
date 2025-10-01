@@ -22,13 +22,13 @@ export function Navbar() {
   ]
 
   const handleConnectWallet = async (walletId: string) => {
-    await connect()
+    await connect(walletId)
   }
 
   return (
     <>
       <motion.nav
-        className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+        className="relative z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
         initial="hidden"
         animate="visible"
         variants={fadeIn}
@@ -82,8 +82,8 @@ export function Navbar() {
                 <motion.div variants={buttonGlow} initial="initial" whileHover="hover" whileTap="tap">
                   <Button
                     onClick={() => setShowWalletModal(true)}
-                    variant="outline"
-                    className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+                    variant="default"
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground glow-pink hover-glow-pink shadow-sm"
                   >
                     Connect Wallet
                   </Button>
@@ -137,15 +137,18 @@ export function Navbar() {
                   ))}
                   <motion.div className="flex flex-col space-y-2 px-3 pt-4" variants={staggerItem}>
                     {isConnected ? (
-                      <div className="text-sm text-muted-foreground">Wallet Connected</div>
+                      // Show the interactive wallet dropdown even on mobile so tapping reveals actions
+                      <div className="w-full">
+                        <WalletDropdown />
+                      </div>
                     ) : (
                       <Button
                         onClick={() => {
                           setShowWalletModal(true)
                           setIsOpen(false)
                         }}
-                        variant="outline"
-                        className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+                        variant="default"
+                        className="bg-accent hover:bg-accent/90 text-accent-foreground glow-pink hover-glow-pink shadow-sm"
                       >
                         Connect Wallet
                       </Button>

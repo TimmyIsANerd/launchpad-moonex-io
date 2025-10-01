@@ -46,7 +46,7 @@ interface EnhancedTokenTableProps {
 const ITEMS_PER_PAGE = 10
 
 export function EnhancedTokenTable({ tokens, title = "Token Explorer", showToggle = true }: EnhancedTokenTableProps) {
-  const [activeTab, setActiveTab] = useState<"pancakeswap" | "unbonded">("pancakeswap")
+  const [activeTab, setActiveTab] = useState<"pancakeswap" | "unbonded">("unbonded")
   const [searchQuery, setSearchQuery] = useState("")
   const [filterBy, setFilterBy] = useState("all")
   const [sortBy, setSortBy] = useState<"volume" | "created">("volume")
@@ -168,18 +168,18 @@ export function EnhancedTokenTable({ tokens, title = "Token Explorer", showToggl
             <TabsList className="grid w-full max-w-md grid-cols-2 bg-card">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <TabsTrigger
-                  value="pancakeswap"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground w-full"
-                >
-                  🥞 PancakeSwap Listed
-                </TabsTrigger>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <TabsTrigger
                   value="unbonded"
                   className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground w-full"
                 >
                   🚀 Pre-Launch Tokens
+                </TabsTrigger>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <TabsTrigger
+                  value="pancakeswap"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground w-full"
+                >
+                  🥞 PancakeSwap Listed
                 </TabsTrigger>
               </motion.div>
             </TabsList>
@@ -431,7 +431,6 @@ export function EnhancedTokenTable({ tokens, title = "Token Explorer", showToggl
                   className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
-
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const pageNum = i + 1
                 return (
@@ -449,13 +448,11 @@ export function EnhancedTokenTable({ tokens, title = "Token Explorer", showToggl
                   </PaginationItem>
                 )
               })}
-
               {totalPages > 5 && (
                 <PaginationItem>
                   <PaginationEllipsis />
                 </PaginationItem>
               )}
-
               <PaginationItem>
                 <PaginationNext
                   href="#"

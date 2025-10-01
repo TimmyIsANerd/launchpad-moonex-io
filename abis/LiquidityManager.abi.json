@@ -1,0 +1,6 @@
+{
+  "abi": [
+    { "inputs": [ { "internalType": "address", "name": "_tokenAddress", "type": "address" }, { "internalType": "uint256", "name": "_tokenAmount", "type": "uint256" } ], "name": "addLiquidity", "outputs": [], "stateMutability": "payable", "type": "function" },
+    { "inputs": [], "name": "owner", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }
+  ]
+}

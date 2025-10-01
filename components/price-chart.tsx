@@ -26,13 +26,15 @@ const generatePriceData = (timeframe: string) => {
 
 interface PriceChartProps {
   tokenName: string
-  currentPrice: string
-  change24h: number
+  currentPrice?: string
+  change24h?: number
+  data?: { time: string | number; price: number }[]
+  defaultTimeframe?: "1H" | "1D" | "1W"
 }
 
-export function PriceChart({ tokenName, currentPrice, change24h }: PriceChartProps) {
-  const [timeframe, setTimeframe] = useState<"1H" | "1D" | "1W">("1D")
-  const [chartData] = useState(() => generatePriceData(timeframe))
+export function PriceChart({ tokenName, currentPrice, change24h, data, defaultTimeframe = "1D" }: PriceChartProps) {
+  const [timeframe, setTimeframe] = useState<"1H" | "1D" | "1W">(defaultTimeframe)
+  const [chartData] = useState(() => (data && data.length ? data : generatePriceData(timeframe)))
 
   const timeframes = [
     { key: "1H", label: "1H" },
@@ -65,13 +67,17 @@ export function PriceChart({ tokenName, currentPrice, change24h }: PriceChartPro
             ))}
           </div>
         </div>
-        <div className="flex items-center space-x-4">
+<div className="flex items-center space-x-4">
           <div>
-            <p className="text-2xl font-bold text-foreground">{currentPrice}</p>
-            <p className={`text-sm ${change24h >= 0 ? "text-green-400" : "text-red-400"}`}>
-              {change24h >= 0 ? "+" : ""}
-              {change24h.toFixed(2)}% (24h)
-            </p>
+            <p className="text-2xl font-bold text-foreground">{currentPrice ?? "—"}</p>
+            {typeof change24h === "number" ? (
+              <p className={`text-sm ${change24h >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {change24h >= 0 ? "+" : ""}
+                {change24h.toFixed(2)}% (24h)
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">— (24h)</p>
+            )}
           </div>
         </div>
       </CardHeader>

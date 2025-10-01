@@ -95,7 +95,7 @@ export function WalletConnectModal({ isOpen, onClose, onConnect }: WalletConnect
             initial="hidden"
             animate="visible"
             exit="hidden"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e:any) => e.stopPropagation()}
           >
             <Card className="w-full max-w-md border-border">
               <CardHeader>
@@ -113,7 +113,7 @@ export function WalletConnectModal({ isOpen, onClose, onConnect }: WalletConnect
               <CardContent className="space-y-3">
                 <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
                   {walletOptions.map((wallet, index) => (
-                    <motion.div key={wallet.id} variants={staggerItem} transition={{ delay: index * 0.1 }}>
+                    <motion.div key={wallet.id} variants={staggerItem} transition={{ delay: index * 0.1 }} className="border-border">
                       <motion.div variants={buttonPress} whileHover="hover" whileTap="tap">
                         <Button
                           variant="outline"

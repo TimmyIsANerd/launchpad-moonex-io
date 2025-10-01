@@ -7,7 +7,16 @@ import { Copy, Crown, Trophy, Medal } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { slideUp, staggerContainer, staggerItem, cardHover, buttonPress } from "@/lib/animations"
 
-const sampleHolders = [
+type HolderRow = {
+  rank: number
+  address: string
+  balance: string
+  percentage?: number
+  isCreator?: boolean
+  isWhale?: boolean
+}
+
+const sampleHolders: HolderRow[] = [
   {
     rank: 1,
     address: "0x1234567890abcdef1234567890abcdef12345678",
@@ -60,9 +69,11 @@ const sampleHolders = [
 
 interface HoldersTableProps {
   tokenTicker: string
+  holders?: HolderRow[]
+  showShare?: boolean
 }
 
-export function HoldersTable({ tokenTicker }: HoldersTableProps) {
+export function HoldersTable({ tokenTicker, holders, showShare = false }: HoldersTableProps) {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
     // You could add a toast notification here
@@ -112,8 +123,8 @@ export function HoldersTable({ tokenTicker }: HoldersTableProps) {
               >
                 <div className="col-span-1">Rank</div>
                 <div className="col-span-6">Wallet Address</div>
-                <div className="col-span-3 text-right">Balance</div>
-                <div className="col-span-2 text-right">Share</div>
+                <div className={showShare ? "col-span-3 text-right" : "col-span-5 text-right"}>Balance</div>
+                {showShare && <div className="col-span-2 text-right">Share</div>}
               </motion.div>
 
               {/* Holders List */}
@@ -124,7 +135,7 @@ export function HoldersTable({ tokenTicker }: HoldersTableProps) {
                 animate="visible"
               >
                 <AnimatePresence>
-                  {sampleHolders.map((holder, index) => (
+                  {(holders ?? sampleHolders).map((holder, index) => (
                     <motion.div
                       key={holder.rank}
                       className="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-card/50 transition-colors group"
@@ -195,25 +206,27 @@ export function HoldersTable({ tokenTicker }: HoldersTableProps) {
                       </div>
 
                       {/* Balance */}
-                      <div className="col-span-3 text-right">
+                      <div className={showShare ? "col-span-3 text-right" : "col-span-5 text-right"}>
                         <span className="text-sm font-medium text-foreground">{formatBalance(holder.balance)}</span>
                         <div className="text-xs text-muted-foreground">{tokenTicker}</div>
                       </div>
 
                       {/* Percentage */}
-                      <div className="col-span-2 text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <span className="text-sm font-medium text-foreground">{holder.percentage}%</span>
+                      {showShare && (
+                        <div className="col-span-2 text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <span className="text-sm font-medium text-foreground">{holder.percentage ?? "—"}%</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-1 mt-1">
+                            <motion.div
+                              className="bg-gradient-to-r from-primary to-secondary h-1 rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min((holder.percentage ?? 0) * 10, 100)}%` }}
+                              transition={{ delay: 0.5 + index * 0.02, duration: 0.8, ease: "easeOut" }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-full bg-muted rounded-full h-1 mt-1">
-                          <motion.div
-                            className="bg-gradient-to-r from-primary to-secondary h-1 rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.min(holder.percentage * 10, 100)}%` }}
-                            transition={{ delay: 0.5 + index * 0.02, duration: 0.8, ease: "easeOut" }}
-                          />
-                        </div>
-                      </div>
+                      )}
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -234,7 +247,7 @@ export function HoldersTable({ tokenTicker }: HoldersTableProps) {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1, duration: 0.5 }}
                   >
-                    {sampleHolders.reduce((sum, holder) => sum + holder.percentage, 0).toFixed(2)}% of supply
+                    {(holders ?? sampleHolders).reduce((sum, holder) => sum + (holder.percentage ?? 0), 0).toFixed(2)}% of supply
                   </motion.span>
                 </div>
               </motion.div>
