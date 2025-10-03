@@ -3,118 +3,111 @@ import { BondingCurveLaunchABI } from "@/abis"
 import { formatEther, parseEther } from "viem"
 
 /**
- * Calculate approximately how many tokens can be bought for given BNB amount
- * This performs inverse calculation since getPriceForAmount expects token amount
+ * Calculate how many tokens can be bought for given BNB amount
+ * Uses the exact same math as the smart contract's buy() function
  */
 export function useTokensForBNB(curveAddress?: string, bnbAmount?: string) {
   const cleanAmount = bnbAmount ? bnbAmount.replace(/,/g, '') : undefined
   
-  // First, get curve parameters to do manual calculation
-  const { data: curveData, isLoading: paramsLoading } = useReadContract({
-    address: curveAddress as `0x${string}`,
-    abi: BondingCurveLaunchABI.abi,
-    functionName: "getCurrentPrice",
-    query: {
-      enabled: !!curveAddress,
-      refetchInterval: 10000,
-    },
-  })
-
-  const { data: p0Data } = useReadContract({
+  // Get all required contract parameters
+  const { data: p0Data, isLoading: p0Loading } = useReadContract({
     address: curveAddress as `0x${string}`,
     abi: BondingCurveLaunchABI.abi,
     functionName: "p0",
     query: {
       enabled: !!curveAddress,
-      refetchInterval: 10000,
+      refetchInterval: 5000,
     },
   })
 
-  const { data: kData } = useReadContract({
+  const { data: kData, isLoading: kLoading } = useReadContract({
     address: curveAddress as `0x${string}`,
     abi: BondingCurveLaunchABI.abi,
     functionName: "k",
     query: {
       enabled: !!curveAddress,
-      refetchInterval: 10000,
+      refetchInterval: 5000,
     },
   })
 
-  const { data: soldData } = useReadContract({
+  const { data: soldData, isLoading: soldLoading } = useReadContract({
     address: curveAddress as `0x${string}`,
     abi: BondingCurveLaunchABI.abi,
     functionName: "sold",
     query: {
       enabled: !!curveAddress,
-      refetchInterval: 10000,
+      refetchInterval: 5000,
     },
   })
 
-  const { data: feeBpsData } = useReadContract({
+  const { data: feeBpsData, isLoading: feeLoading } = useReadContract({
     address: curveAddress as `0x${string}`,
     abi: BondingCurveLaunchABI.abi,
     functionName: "tradeFeeBps",
     query: {
       enabled: !!curveAddress,
-      refetchInterval: 10000,
+      refetchInterval: 5000,
     },
   })
 
-  const isLoading = paramsLoading || !curveData || !p0Data || !kData || !soldData || !feeBpsData
+  const isLoading = p0Loading || kLoading || soldLoading || feeLoading
 
   let tokensReceived: number | null = null
   let feeAmount: number | null = null
 
-  // Debug logging
-  if (process.env.NODE_ENV === 'development' && cleanAmount) {
-    console.log("useTokensForBNB:", {
-      isLoading,
-      cleanAmount,
-      hasData: !!curveData && !!p0Data && !!kData && !!soldData && !!feeBpsData
-    })
-  }
-
-  if (!isLoading && cleanAmount) {
+  if (!isLoading && cleanAmount && p0Data && kData !== undefined && soldData && feeBpsData !== undefined) {
     try {
       const bnbValue = parseFloat(cleanAmount)
-      const p0 = parseFloat(formatEther(p0Data as bigint))
-      const k = parseFloat(formatEther(kData as bigint))
-      const sold = parseFloat(formatEther(soldData as bigint))
+      if (bnbValue <= 0) return { tokensReceived: null, feeAmount: null, isLoading: false }
+
+      // Calculate platform fee first (same as contract)
       const feeBps = Number(feeBpsData)
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Contract values:", { bnbValue, p0, k, sold, feeBps })
-      }
-      
-      // Calculate platform fee (subtract from available BNB)
       const feeRate = feeBps / 10000
       feeAmount = bnbValue * feeRate
       const bnbForTrading = bnbValue - feeAmount
 
-      if (k === 0) {
-        // Constant price: tokens = bnb / price
-        tokensReceived = bnbForTrading / p0
-        if (process.env.NODE_ENV === 'development') {
-          console.log("Tokens received:", Math.floor(tokensReceived))
-        }
+      // Work directly with wei values to match contract exactly
+      const p0Wei = Number(p0Data as bigint)
+      const kWei = Number(kData as bigint)
+      const soldWei = Number(soldData as bigint)
+      const bnbForTradingWei = Math.floor(bnbForTrading * 1e18)
+
+      let deltaWei = 0
+
+      if (kWei === 0) {
+        // Constant price: deltaWei = (bnbForTrading * 1e18) / p0
+        deltaWei = Math.floor((bnbForTradingWei * 1e18) / p0Wei)
       } else {
-        // Quadratic curve calculation
-        // We need to solve: A = a*t + (b/2)*((q0 + t)² - q0²)
-        // For constant k curve: cost = p0*t + (k/2)*t²
-        // Rearranging: (k/2)*t² + p0*t - A = 0
+        // Linear bonding curve: solve quadratic equation
+        // k*Δq² + 2*(p0 + k*q₀)*Δq - 2*A = 0
+        const W = 1e18
+        const a = p0Wei
+        const b = kWei
+        const q0 = Math.floor(soldWei / W) // Current quantity in token units
         
-        const a = p0
-        const b = k / 2
-        const c = -bnbForTrading
+        const B = 2 * (a + b * q0)
+        const discriminant = B * B + 8 * b * bnbForTradingWei
         
-        // Quadratic formula: t = (-b + sqrt(b² - 4*a*c)) / (2*a)
-        const discriminant = a * a + 8 * b * bnbForTrading
         if (discriminant >= 0) {
-          tokensReceived = (-a + Math.sqrt(discriminant)) / (2 * b)
+          const sqrtD = Math.sqrt(discriminant)
+          if (sqrtD >= B) {
+            deltaWei = Math.floor((sqrtD - B) / (2 * b))
+          }
         }
       }
+
+      // Convert deltaWei to tokens (divide by 1e18)
+      tokensReceived = deltaWei / 1e18
+
+      // Ensure we don't return negative values
+      if (tokensReceived < 0) {
+        tokensReceived = 0
+      }
+
     } catch (error) {
       console.error("Error calculating tokens for BNB:", error)
+      tokensReceived = null
+      feeAmount = null
     }
   }
 
