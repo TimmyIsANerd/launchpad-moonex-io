@@ -123,12 +123,13 @@ export function MultistepTokenForm({
       case 4: return formData.raiseAmount && parseFloat(formData.raiseAmount) > 0 // Funding step
       case 5: return true // Social links are optional
       case 6: return formData.feeRecipient && formData.feePercentage >= 0 // Config step
+      case 7: return true // Review step - ready to submit
       default: return true
     }
   }
 
   const nextStep = () => {
-    if (currentStep < 6 && canProceed()) {
+    if (currentStep < 7 && canProceed()) {
       setCurrentStep(currentStep + 1)
     }
   }
