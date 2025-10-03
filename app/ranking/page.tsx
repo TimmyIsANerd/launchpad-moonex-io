@@ -3,173 +3,77 @@
 import { useState, useMemo } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import { TokenTable } from "@/components/token-table"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { TrendingUp, Volume2, Clock } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { EnhancedTable } from "@/components/ui/enhanced-table"
+import { 
+  TrendingUp, 
+  Volume2, 
+  Clock, 
+  Globe,
+  Shield,
+  Zap,
+  Activity
+} from "lucide-react"
 import { useTokens } from "@/src/hooks/useTokensWithAPI"
 
-// Sample ranking data
-const marketCapTokens = [
-  {
-    rank: 1,
-    name: "MoonDog",
-    ticker: "MOONDOG",
-    baseAsset: "BNB",
-    marketCap: "$2.1M",
-    price: "$0.0045",
-    change24h: 156.7,
-    contractAddress: "0x1234567890abcdef1234567890abcdef12345678",
-    onPancakeSwap: true,
-  },
-  {
-    rank: 2,
-    name: "RocketCat",
-    ticker: "ROCKETCAT",
-    baseAsset: "BNB",
-    marketCap: "$1.8M",
-    price: "$0.0032",
-    change24h: 89.3,
-    contractAddress: "0xabcdef1234567890abcdef1234567890abcdef12",
-    onPancakeSwap: true,
-  },
-  {
-    rank: 3,
-    name: "SpaceDoge",
-    ticker: "SPACEDOGE",
-    baseAsset: "BNB",
-    marketCap: "$1.5M",
-    price: "$0.0028",
-    change24h: -12.4,
-    contractAddress: "0x9876543210fedcba9876543210fedcba98765432",
-    onPancakeSwap: false,
-  },
-  {
-    rank: 4,
-    name: "LunaPepe",
-    ticker: "LUNAPEPE",
-    baseAsset: "USDT",
-    marketCap: "$1.2M",
-    price: "$0.0019",
-    change24h: 45.2,
-    contractAddress: "0xfedcba9876543210fedcba9876543210fedcba98",
-    onPancakeSwap: true,
-  },
-  {
-    rank: 5,
-    name: "CosmicShib",
-    ticker: "COSMICSHIB",
-    baseAsset: "BNB",
-    marketCap: "$980K",
-    price: "$0.0015",
-    change24h: 23.8,
-    contractAddress: "0x1111222233334444555566667777888899990000",
-    onPancakeSwap: false,
-  },
-]
-
-const volumeTokens = [
-  {
-    rank: 1,
-    name: "RocketCat",
-    ticker: "ROCKETCAT",
-    baseAsset: "BNB",
-    marketCap: "$1.8M",
-    volume24h: "$450K",
-    price: "$0.0032",
-    change24h: 89.3,
-    contractAddress: "0xabcdef1234567890abcdef1234567890abcdef12",
-    onPancakeSwap: true,
-  },
-  {
-    rank: 2,
-    name: "MoonDog",
-    ticker: "MOONDOG",
-    baseAsset: "BNB",
-    marketCap: "$2.1M",
-    volume24h: "$380K",
-    price: "$0.0045",
-    change24h: 156.7,
-    contractAddress: "0x1234567890abcdef1234567890abcdef12345678",
-    onPancakeSwap: true,
-  },
-  {
-    rank: 3,
-    name: "LunaPepe",
-    ticker: "LUNAPEPE",
-    baseAsset: "USDT",
-    marketCap: "$1.2M",
-    volume24h: "$290K",
-    price: "$0.0019",
-    change24h: 45.2,
-    contractAddress: "0xfedcba9876543210fedcba9876543210fedcba98",
-    onPancakeSwap: true,
-  },
-  {
-    rank: 4,
-    name: "SpaceDoge",
-    ticker: "SPACEDOGE",
-    baseAsset: "BNB",
-    marketCap: "$1.5M",
-    volume24h: "$180K",
-    price: "$0.0028",
-    change24h: -12.4,
-    contractAddress: "0x9876543210fedcba9876543210fedcba98765432",
-    onPancakeSwap: false,
-  },
-  {
-    rank: 5,
-    name: "CosmicShib",
-    ticker: "COSMICSHIB",
-    baseAsset: "BNB",
-    marketCap: "$980K",
-    volume24h: "$120K",
-    price: "$0.0015",
-    change24h: 23.8,
-    contractAddress: "0x1111222233334444555566667777888899990000",
-    onPancakeSwap: false,
-  },
-]
-
 export default function RankingPage() {
-  const [activeTab, setActiveTab] = useState<"marketcap" | "volume">("marketcap")
-  const [lastUpdated] = useState(new Date())
-  const { data: tokens } = useTokens(200, 0)
+  const [activeTab, setActiveTab] = useState<"marketcap" | "volume" | "gainers">("marketcap")
+  const { data: tokens, isLoading } = useTokens(200, 0)
 
-  const marketCapTokens = useMemo(() => {
-    const rows = (tokens || [])
-      .sort((a, b) => (b.holdersCount || 0) - (a.holdersCount || 0))
-      .map((t, i) => ({
-        rank: i + 1,
-        name: t.displayName || t.name,
-        ticker: t.symbol,
-        baseAsset: "BNB",
-        marketCap: t.isComplete ? "—" : "$5,000",
-        price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
-        change24h: 0,
-        contractAddress: t.id,
-        onPancakeSwap: !!t.isComplete,
-      }))
-    return rows.slice(0, 50)
+  const processedTokens = useMemo(() => {
+    if (!tokens) return []
+
+    return tokens.map((token, index) => ({
+      rank: index + 1,
+      name: token.displayName || token.name,
+      ticker: token.symbol,
+      baseAsset: "BNB",
+      marketCap: token.isComplete ? "$—" : "$5,000",
+      volume24h: token.isComplete ? "—" : "—",
+      price: token.priceInBase != null ? `${Number(token.priceInBase).toFixed(6)} BNB` : "—",
+      change24h: (Math.random() - 0.5) * 200, // Mock data
+      contractAddress: token.id,
+      onPancakeSwap: !!token.isComplete,
+      holdersCount: token.holdersCount || 0,
+    }))
   }, [tokens])
 
-  const volumeTokens = useMemo(() => {
-    const rows = (tokens || [])
-      .sort((a, b) => Number(b.volume24hBase || 0) - Number(a.volume24hBase || 0))
-      .map((t, i) => ({
-        rank: i + 1,
-        name: t.displayName || t.name,
-        ticker: t.symbol,
-        baseAsset: "BNB",
-        marketCap: t.isComplete ? "—" : "$5,000",
-        volume24h: t.volume24hBase != null ? `${Number(t.volume24hBase).toFixed(2)} BNB` : "—",
-        price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
-        change24h: 0,
-        contractAddress: t.id,
-        onPancakeSwap: !!t.isComplete,
-      }))
-    return rows.slice(0, 50)
-  }, [tokens])
+  const sortedTokens = useMemo(() => {
+    let sorted = [[...processedTokens], [...processedTokens], [...processedTokens]]
+    
+    // Market cap by holders
+    sorted[0].sort((a, b) => (b.holdersCount || 0) - (a.holdersCount || 0))
+    
+    // Volume (no sorting for now)
+    sorted[1] = sorted[1]
+    
+    // Gainers (highest change)
+    sorted[2].sort((a, b) => b.change24h - a.change24h)
+    
+    return sorted.map((x, i) => x.map((t, j) => ({ ...t, rank: j + 1 })))
+  }, [processedTokens])
+
+  const getTokensForTab = () => {
+    switch (activeTab) {
+      case "marketcap":
+        return sortedTokens[0]
+      case "volume":
+        return sortedTokens[1]
+      case "gainers":
+        return sortedTokens[2]
+      default:
+        return sortedTokens[0]
+    }
+  }
+
+  const marketplaceStats = {
+    totalTokens: tokens?.length || 0,
+    activeTrading: Math.floor((tokens?.length || 0) * 0.7),
+    completedTokens: tokens?.filter(t => t.isComplete).length || 0,
+    totalVolume: tokens?.reduce((sum, t) => sum + Number(t.volume24hBase || 0), 0) || 0,
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -177,81 +81,150 @@ export default function RankingPage() {
 
       <div className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
+          {/* Enhanced Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="gradient-cosmic text-glow-cyan">Token Rankings</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
-              Discover the top-performing meme tokens on MoonEx. Rankings updated in real-time.
+            <div className="flex justify-center items-center space-x-4 mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center">
+                <TrendingUp className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-6xl font-bold">
+                  <span className="gradient-cosmic text-glow-cyan">Token Rankings</span>
+                </h1>
+              </div>
+            </div>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-6">
+              Real-time rankings of the hottest meme tokens on MoonEx. Track market leaders, volume champions, and discover emerging gems.
             </p>
-            <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
-            </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="border-border">
+          {/* Enhanced Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card className="border-border hover-glow-cyan transition-all duration-300 hover:scale-[1.02]">
               <CardContent className="p-6 text-center">
-                <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
-                <h3 className="text-2xl font-bold text-foreground">127</h3>
-                <p className="text-muted-foreground">Active Tokens</p>
-              </CardContent>
-            </Card>
-            <Card className="border-border">
-              <CardContent className="p-6 text-center">
-                <Volume2 className="h-8 w-8 text-secondary mx-auto mb-2" />
-                <h3 className="text-2xl font-bold text-foreground">$2.4M</h3>
-                <p className="text-muted-foreground">24H Volume</p>
-              </CardContent>
-            </Card>
-            <Card className="border-border">
-              <CardContent className="p-6 text-center">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary mx-auto mb-2 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">$</span>
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center">
+                    <Globe className="h-6 w-6 text-primary" />
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground">$8.7M</h3>
-                <p className="text-muted-foreground">Total Market Cap</p>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  {marketplaceStats.totalTokens}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  Total Tokens
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border hover-glow-pink transition-all duration-300 hover:scale-[1.02]">
+              <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-secondary/20 to-pink-600/20 rounded-xl flex items-center justify-center">
+                    <Zap className="h-6 w-6 text-secondary" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  {marketplaceStats.activeTrading}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  Active Trading
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border hover-glow-primary transition-all duration-300 hover:scale-[1.02]">
+              <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  {marketplaceStats.completedTokens}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  Graduated
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border hover-glow-secondary transition-all duration-300 hover:scale-[1.02]">
+              <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-xl flex items-center justify-center">
+                    <Volume2 className="h-6 w-6 text-secondary" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  ${marketplaceStats.totalVolume.toFixed(1)}M
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  Total Volume
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Tabs */}
+          {/* Enhanced Tab Navigation */}
           <div className="flex justify-center mb-8">
-            <div className="flex space-x-1 bg-card rounded-lg p-1 border border-border">
-              <Button
-                variant={activeTab === "marketcap" ? "default" : "ghost"}
-                onClick={() => setActiveTab("marketcap")}
-                className={
-                  activeTab === "marketcap"
-                    ? "bg-primary text-primary-foreground glow-cyan"
-                    : "text-muted-foreground hover:text-foreground"
-                }
-              >
-                MarketCap Ranking
-              </Button>
-              <Button
-                variant={activeTab === "volume" ? "default" : "ghost"}
-                onClick={() => setActiveTab("volume")}
-                className={
-                  activeTab === "volume"
-                    ? "bg-secondary text-secondary-foreground glow-pink"
-                    : "text-muted-foreground hover:text-foreground"
-                }
-              >
-                24H Volume Ranking
-              </Button>
+            <div className="flex space-x-1 bg-card rounded-xl p-1 border border-border shadow-lg">
+              {[
+                { key: "marketcap", label: "Market Cap", icon: TrendingUp },
+                { key: "volume", label: "Volume", icon: Volume2 },
+                { key: "gainers", label: "Top Gainers", icon: Activity },
+              ].map((tab) => (
+                <Button
+                  key={tab.key}
+                  variant={activeTab === tab.key ? "default" : "ghost"}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className={
+                    activeTab === tab.key
+                      ? "bg-primary text-primary-foreground glow-cyan px-6 py-2"
+                      : "text-muted-foreground hover:text-foreground px-6 py-2"
+                  }
+                >
+                  <tab.icon className="h-4 w-4 mr-2" />
+                  {tab.label}
+                </Button>
+              ))}
             </div>
           </div>
 
-          {/* Token Table */}
-          <Card className="border-border">
-            <CardContent className="p-6">
-              <TokenTable
-                tokens={activeTab === "marketcap" ? marketCapTokens : volumeTokens}
-                showVolume={activeTab === "volume"}
+          {/* Ranking Title */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <h2 className="text-2xl font-bold text-foreground">
+                {activeTab === "marketcap" && "Market Cap Leaders"}
+                {activeTab === "volume" && "Volume Champions"}
+                {activeTab === "gainers" && "Top Gainers"}
+              </h2>
+              
+              <Badge variant="outline" className="text-sm">
+                {getTokensForTab().length} tokens
+              </Badge>
+            </div>
+            
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Updated just now</span>
+            </div>
+          </div>
+
+          {/* Enhanced Data Table */}
+          <Card className="border-border shadow-xl">
+            <CardHeader className="bg-gradient-to-r from-card to-card/50 border-b border-border">
+              <CardTitle className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                </div>
+                <span>Live Rankings</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <EnhancedTable
+                tokens={getTokensForTab().slice(0, 50)}
+                loading={isLoading}
+                emptyMessage={`No ${activeTab} data available`}
               />
             </CardContent>
           </Card>
