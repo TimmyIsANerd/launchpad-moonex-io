@@ -87,7 +87,7 @@ export function StepIndicator({ steps, currentStep, onStepClick }: StepIndicator
                   </p>
                 )}
               </div>
-            </div>
+            </motion.div>
           )
         })}
       </div>
