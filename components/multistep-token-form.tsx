@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { SquareImageUpload } from "@/components/square-image-upload"
-import { StepIndicator } from "@/components/step-indicator"
+import { EnhancedStepIndicator } from "@/components/enhanced-step-indicator"
 import { 
   Wallet, 
   Rocket, 
@@ -24,6 +24,7 @@ import {
   CheckCircle
 } from "lucide-react"
 import { toast } from "sonner"
+import { parseEther } from "viem"
 import { moonexApi, type LaunchPreparationData } from "@/lib/moonex-api"
 
 interface TokenFormData {
@@ -116,20 +117,103 @@ export function MultistepTokenForm({
   const [currentStep, setCurrentStep] = useState(1) // Start from step 1 (logo)
 
   const canProceed = () => {
+    // Use simplified validation for UI state (no toast messages)
     switch (currentStep) {
-      case 1: return isConnected // Wallet step
-      case 2: return formData.logo !== null // Logo step
-      case 3: return formData.name && formData.ticker && formData.description // Details step
-      case 4: return formData.raiseAmount && parseFloat(formData.raiseAmount) > 0 // Funding step
-      case 5: return true // Social links are optional
-      case 6: return formData.feeRecipient && formData.feePercentage >= 0 // Config step
-      case 7: return true // Review step - ready to submit
+      case 1: return isConnected
+      case 2: return formData.logo !== null
+      case 3: return formData.name?.trim() && formData.ticker?.trim() && formData.description?.trim() && formData.ticker.length >= 2 && formData.description.length >= 20 && tickerCheck.available !== false
+      case 4: return formData.raiseAmount && parseFloat(formData.raiseAmount) > 0
+      case 5: return true
+      case 6: return formData.feeRecipient && /^0x[a-fA-F0-9]{40}$/.test(formData.feeRecipient) && formData.feePercentage >= 1 && formData.feePercentage <= 3
+      case 7: return true
       default: return true
     }
   }
 
+  const validateCurrentStep = () => {
+    switch (currentStep) {
+      case 1: // Wallet step
+        if (!isConnected) {
+          toast.error("🔗 Please connect your wallet to continue")
+          return false
+        }
+        return true
+
+      case 2: // Logo step
+        if (!formData.logo) {
+          toast.error("📷 Please upload a token logo to continue")
+          return false
+        }
+        return true
+
+      case 3: // Details step
+        if (!formData.name?.trim()) {
+          toast.error("📝 Please enter a token name to continue")
+          return false
+        }
+        if (!formData.ticker?.trim()) {
+          toast.error("🏷️ Please enter a token symbol to continue")
+          return false
+        } else if (formData.ticker.length < 2) {
+          toast.error("🏷️ Token symbol must be at least 2 characters")
+          return false
+        }
+        if (!formData.description?.trim()) {
+          toast.error("📄 Please enter a token description to continue")
+          return false
+        } else if (formData.description.length < 20) {
+          toast.error("📄 Please enter a description with at least 20 characters")
+          return false
+        }
+        if (tickerCheck.available === false) {
+          toast.error("🚫 This token symbol is already taken, please choose another")
+          return false
+        }
+        return true
+
+      case 4: // Funding step
+        if (!formData.raiseAmount || parseFloat(formData.raiseAmount) <= 0) {
+          toast.error("💰 Please enter a valid raise amount to continue")
+          return false
+        }
+        try {
+          parseEther(formData.raiseAmount)
+          return true
+        } catch (error) {
+          toast.error("💰 Please enter a valid ETH amount (e.g., 1.5)")
+          return false
+        }
+
+      case 5: // Social step
+        return true // Social links are optional
+
+      case 6: // Config step
+        if (!formData.feeRecipient) {
+          toast.error("🏦 Please enter a fee recipient address to continue")
+          return false
+        } else if (!/^0x[a-fA-F0-9]{40}$/.test(formData.feeRecipient)) {
+          toast.error("🏦 Please enter a valid wallet address (0x...)")
+          return false
+        }
+        if (formData.feePercentage < 1 || formData.feePercentage > 3) {
+          toast.error("⚙️ Please set a fee percentage between 1% and 3%")
+          return false
+        }
+        return true
+
+      case 7: // Review step
+        return true
+
+      default:
+        return true
+    }
+  }
+
   const nextStep = () => {
-    if (currentStep < 7 && canProceed()) {
+    if (!validateCurrentStep()) {
+      return // Block navigation if validation fails
+    }
+    if (currentStep < 7) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -621,11 +705,16 @@ export function MultistepTokenForm({
 
   return (
     <div className="space-y-8">
-      {/* Step Indicator */}
-      <StepIndicator 
+      {/* Enhanced Step Indicator */}
+      <EnhancedStepIndicator 
         steps={formSteps} 
         currentStep={currentStep}
-        onStepClick={setCurrentStep}
+        onStepClick={(stepIndex) => {
+          // Only allow clicking on completed steps or the next immediate step
+          if (stepIndex <= currentStep || (stepIndex === currentStep + 1 && canProceed())) {
+            setCurrentStep(stepIndex)
+          }
+        }}
       />
 
       {/* Step Content */}
@@ -636,15 +725,17 @@ export function MultistepTokenForm({
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-4">
         <Button
           type="button"
           variant="outline"
           onClick={prevStep}
           disabled={currentStep === 1 || isSubmitting}
+          className="px-6"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
-          Previous
+          <span className="hidden sm:inline">Previous</span>
+          <span className="sm:hidden">Back</span>
         </Button>
 
         {currentStep < 7 ? (
@@ -652,12 +743,23 @@ export function MultistepTokenForm({
             type="button"
             onClick={nextStep}
             disabled={!canProceed() || isSubmitting}
+            className="px-6 bg-primary hover:bg-primary/90 flex-1 max-w-xs"
           >
-            Next
+            <span className="hidden sm:inline">Next Step</span>
+            <span className="sm:hidden">Next</span>
             <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
         ) : null}
       </div>
+
+      {/* Mobile Completion Status */}
+      {currentStep < 7 && (
+        <div className="md:hidden bg-muted/50 rounded-lg p-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Complete all fields on this step to proceed to the next one
+          </p>
+        </div>
+      )}
     </div>
   )
 }
