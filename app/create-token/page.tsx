@@ -11,6 +11,7 @@ import { MultistepTokenForm } from "@/components/multistep-token-form"
 import { useWallet } from "@/components/wallet-provider"
 import { Wallet, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
+import { parseEther, formatEther } from "viem"
 import { moonexApi, type LaunchPreparationData } from "@/lib/moonex-api"
 
 interface TokenFormData {
@@ -144,7 +145,15 @@ export default function CreateTokenPage() {
       newErrors.raiseAmount = "Valid raise amount is required"
       console.log('❌ Raise amount invalid:', formData.raiseAmount)
     } else {
-      console.log('✅ Raise amount valid')
+      try {
+        // Convert ETH to Wei for validation - ensure it's a valid number
+        const ethAmount = parseFloat(formData.raiseAmount)
+        const weiAmount = parseEther(ethAmount.toString())
+        console.log('✅ Raise amount valid:', `${ethAmount} ETH = ${weiAmount.toString()} Wei`)
+      } catch (error) {
+        newErrors.raiseAmount = "Invalid ETH amount format"
+        console.log('❌ Raise amount parse error:', error)
+      }
     }
 
     if (!formData.feeRecipient) {
@@ -227,12 +236,17 @@ export default function CreateTokenPage() {
       setCreationPhase('uploading')
       
       // Prepare upload data
+      const ethAmount = parseFloat(formData.raiseAmount)
+      
+      console.log(`Submitting raise amount: ${ethAmount} ETH`)
+      console.log(`In Wei (for smart contracts): ${parseEther(ethAmount.toString()).toString()}`)
+      
       const uploadData: LaunchPreparationData = {
         name: formData.name,
         ticker: formData.ticker,
         description: formData.description,
         raisedToken: formData.raisedToken,
-        raiseAmount: parseFloat(formData.raiseAmount),
+        raiseAmount: ethAmount, // Send ETH amount for API - smart contracts will need Wei conversion
         website: formData.website,
         twitter: formData.twitter,
         telegram: formData.telegram,
