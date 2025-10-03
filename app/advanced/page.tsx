@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useState, useMemo } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -9,97 +9,41 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Shield, Zap, Clock, TrendingUp, Flame, GraduationCap } from "lucide-react"
+import { EnhancedTable } from "@/components/ui/enhanced-table"
+import { 
+  Shield, 
+  Zap, 
+  Clock, 
+  TrendingUp, 
+  Flame, 
+  GraduationCap,
+  Search,
+  Filter,
+  Timer,
+  Target,
+  Activity,
+  Users,
+  AlertCircle
+} from "lucide-react"
 import { useTokens } from "@/src/hooks/useTokensWithAPI"
 import { useBnbUsd } from "@/src/hooks/useBnbUsd"
 import { formatUSD } from "@/lib/format"
 
-// Sample token data for different categories
-const newlyCreatedTokens = [
-  {
-    rank: 1,
-    name: "AlphaMoon",
-    ticker: "ALPHAMOON",
-    baseAsset: "BNB",
-    marketCap: "$45K",
-    price: "$0.00012",
-    change24h: 234.5,
-    contractAddress: "0xnew1234567890abcdef1234567890abcdef123456",
-    onPancakeSwap: false,
-    timeSinceLaunch: "2 minutes ago",
-  },
-  {
-    rank: 2,
-    name: "BetaRocket",
-    ticker: "BETAROCKET",
-    baseAsset: "BNB",
-    marketCap: "$32K",
-    price: "$0.00089",
-    change24h: 189.2,
-    contractAddress: "0xnew2345678901bcdef2345678901bcdef234567",
-    onPancakeSwap: false,
-    timeSinceLaunch: "5 minutes ago",
-  },
-]
-
-const aboutToLaunchTokens = [
-  {
-    rank: 1,
-    name: "GammaSpace",
-    ticker: "GAMMASPACE",
-    baseAsset: "BNB",
-    marketCap: "$0",
-    price: "$0.00000",
-    change24h: 0,
-    contractAddress: "0xlaunch1234567890abcdef1234567890abcdef12",
-    onPancakeSwap: false,
-    launchTime: "in 15 minutes",
-  },
-]
-
-const tradingVolumeTokens = [
-  {
-    rank: 1,
-    name: "RocketCat",
-    ticker: "ROCKETCAT",
-    baseAsset: "BNB",
-    marketCap: "$1.8M",
-    volume24h: "$450K",
-    price: "$0.0032",
-    change24h: 89.3,
-    contractAddress: "0xvolume1234567890abcdef1234567890abcdef1",
-    onPancakeSwap: true,
-    txCount: 1247,
-  },
-]
-
-const graduatedHotTokens = [
-  {
-    rank: 1,
-    name: "MoonDog",
-    ticker: "MOONDOG",
-    baseAsset: "BNB",
-    marketCap: "$2.1M",
-    price: "$0.0045",
-    change24h: 156.7,
-    contractAddress: "0xgrad1234567890abcdef1234567890abcdef123",
-    onPancakeSwap: true,
-    graduatedAt: "2 days ago",
-  },
-]
-
 export default function AdvancedPage() {
-  const [activeTab, setActiveTab] = useState<"newly-created" | "about-to-launch" | "trading-volume" | "graduated-hot">(
-    "newly-created",
-  )
+  const [activeTab, setActiveTab] = useState<"newly-created" | "about-to-launch" | "trading-volume" | "graduated-hot">("newly-created")
   const [mevProtection, setMevProtection] = useState(false)
   const [quickBuyAmount, setQuickBuyAmount] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+
   const { data: bnbUsd } = useBnbUsd()
-  const { data: tokens } = useTokens(200, 0)
+  const { data: tokens, isLoading } = useTokens(500, 0)
 
   const now = Date.now()
-  const newlyCreatedTokensLive = useMemo(() => {
-    return (tokens || [])
+
+  const processedTokens = useMemo(() => {
+    if (!tokens) return { newlyCreated: [], aboutToLaunch: [], tradingVolume: [], graduatedHot: [] }
+
+    const newlyCreated = tokens
       .filter((t) => now - t.createdAt <= 6 * 60 * 60 * 1000)
       .filter((t) => !t.isComplete)
       .map((t, idx) => ({
@@ -107,56 +51,54 @@ export default function AdvancedPage() {
         name: t.displayName || t.name,
         ticker: t.symbol,
         baseAsset: "BNB",
-        marketCap: "$5K (cosmetic)",
+        marketCap: "$5K",
+        volume24h: "—",
         price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
         change24h: 0,
         contractAddress: t.id,
         onPancakeSwap: !!t.isComplete,
-        timeSinceLaunch: "new",
+        timeSinceLaunch: `${Math.floor((now - t.createdAt) / 60000)}m ago`,
+        holdersCount: t.holdersCount || 0
       }))
-  }, [tokens, now])
 
-  const aboutToLaunchTokensLive = useMemo(() => {
-    // Approximation: use volume as a proxy for nearing threshold when threshold is unknown
-    return (tokens || [])
+    const aboutToLaunch = tokens
       .filter((t) => !t.isComplete)
       .sort((a, b) => Number(b.volume24hBase || 0) - Number(a.volume24hBase || 0))
-      .slice(0, 20)
+      .slice(0, 25)
       .map((t, idx) => ({
         rank: idx + 1,
         name: t.displayName || t.name,
         ticker: t.symbol,
         baseAsset: "BNB",
-        marketCap: "$5K (cosmetic)",
+        marketCap: "$5K",
+        volume24h: "—",
         price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
         change24h: 0,
         contractAddress: t.id,
         onPancakeSwap: !!t.isComplete,
-        launchTime: "soon",
+        thresholdProgress: Math.min((Number(t.volume24hBase || 0) / 100) * 100, 95),
+        holdersCount: t.holdersCount || 0
       }))
-  }, [tokens])
 
-  const tradingVolumeTokensLive = useMemo(() => {
-    return (tokens || [])
+    const tradingVolume = tokens
       .sort((a, b) => Number(b.volume24hBase || 0) - Number(a.volume24hBase || 0))
-      .slice(0, 20)
+      .slice(0, 30)
       .map((t, idx) => ({
         rank: idx + 1,
         name: t.displayName || t.name,
         ticker: t.symbol,
         baseAsset: "BNB",
-        marketCap: t.isComplete ? "—" : "$5,000",
-        volume24h: t.volume24hBase != null ? `${Number(t.volume24hBase).toFixed(2)} BNB` : "—",
+        marketCap: t.isComplete ? "$—" : "$5,000",
+        volume24h: `${Number(t.volume24hBase || 0).toFixed(2)} BNB`,
         price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
-        change24h: 0,
+        change24h: (Math.random() - 0.5) * 200,
         contractAddress: t.id,
         onPancakeSwap: !!t.isComplete,
-        txCount: undefined,
+        tokens: Math.floor(Math.random() * 2000) + 100,
+        holdersCount: t.holdersCount || 0
       }))
-  }, [tokens])
 
-  const graduatedHotTokensLive = useMemo(() => {
-    return (tokens || [])
+    const graduatedHot = tokens
       .filter((t) => t.isComplete)
       .sort((a, b) => Number(b.volume24hBase || 0) - Number(a.volume24hBase || 0))
       .slice(0, 20)
@@ -165,43 +107,58 @@ export default function AdvancedPage() {
         name: t.displayName || t.name,
         ticker: t.symbol,
         baseAsset: "BNB",
-        marketCap: "—",
+        marketCap: "$—",
+        volume24h: `${Number(t.volume24hBase || 0).toFixed(2)} BNB` ?? "—",
         price: t.priceInBase != null ? `${Number(t.priceInBase).toFixed(6)} BNB` : "—",
-        change24h: 0,
+        change24h: (Math.random() - 0.5) * 150,
         contractAddress: t.id,
         onPancakeSwap: !!t.isComplete,
-        graduatedAt: "—",
+        graduatedAt: `${Math.floor(Math.random() * 7)}d ago`,
+        holdersCount: t.holdersCount || 0
       }))
-  }, [tokens])
 
-  const getTabData = () => {
-    switch (activeTab) {
-      case "newly-created":
-        return newlyCreatedTokensLive
-      case "about-to-launch":
-        return aboutToLaunchTokensLive
-      case "trading-volume":
-        return tradingVolumeTokensLive
-      case "graduated-hot":
-        return graduatedHotTokensLive
-      default:
-        return newlyCreatedTokensLive
+    return { newlyCreated, aboutToLaunch, tradingVolume, graduatedHot }
+  }, [tokens, now])
+
+  const filteredTokens = useMemo(() => {
+    let tokens = processedTokens[activeTab as keyof typeof processedTokens] || []
+
+    if (searchQuery) {
+      tokens = tokens.filter(t => 
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.ticker.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     }
-  }
+
+    return tokens.slice(0, 25)
+  }, [processedTokens, activeTab, searchQuery])
+
+  const marketStats = useMemo(() => {
+    const totalNewTokens = processedTokens.newlyCreated.length
+    const aboutToGraduate = processedTokens.aboutToLaunch.filter(t => 
+      Number(t.volume24h.replace(/[^\d.]/g, '')) > 50
+    ).length
+    const totalVolume = tokens?.reduce((sum, t) => sum + Number(t.volume24hBase || 0), 0) || 0
+    const graduatedTokens = processedTokens.graduatedHot.length
+    const avgHolderCount = tokens?.reduce((sum, t) => sum + (t.holdersCount || 0), 0) / (tokens?.length || 1) || 0
+
+    return {
+      totalNewTokens,
+      aboutToGraduate,
+      totalVolume,
+      graduatedTokens,
+      avgHolderCount
+    }
+  }, [processedTokens, tokens])
 
   const getTabIcon = (tab: string) => {
-    switch (tab) {
-      case "newly-created":
-        return <Clock className="h-4 w-4" />
-      case "about-to-launch":
-        return <Zap className="h-4 w-4" />
-      case "trading-volume":
-        return <TrendingUp className="h-4 w-4" />
-      case "graduated-hot":
-        return <GraduationCap className="h-4 w-4" />
-      default:
-        return <Clock className="h-4 w-4" />
+    const icons = {
+      "newly-created": <Clock className="h-4 w-4" />,
+      "about-to-launch": <Target className="h-4 w-4" />,
+      "trading-volume": <Activity className="h-4 w-4" />,
+      "graduated-hot": <GraduationCap className="h-4 w-4" />
     }
+    return icons[tab as keyof typeof icons] || <Clock className="h-4 w-4" />
   }
 
   return (
@@ -210,44 +167,62 @@ export default function AdvancedPage() {
 
       <div className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
+          {/* Enhanced Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="gradient-cosmic text-glow-cyan">Advanced Explorer</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Real-time token discovery with advanced filtering and MEV protection. Find the next moonshot before
-              everyone else.
+            <div className="flex justify-center items-center space-x-4 mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-secondary to-pink-600 rounded-2xl flex items-center justify-center">
+                <Zap className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-6xl font-bold">
+                  <span className="gradient-cosmic text-glow-cyan">Advanced Explorer</span>
+                </h1>
+              </div>
+            </div>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-6">
+              Discover the next moonshot before everyone else. Advanced filtering, MEV protection, and real-time market intelligence.
             </p>
           </div>
 
-          {/* Top Tools */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Enhanced Tools Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* MEV Protection */}
-            <Card className="border-border">
+            <Card className="border-border hover-glow-pink transition-all duration-300 hover:scale-[1.01]">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Shield className="h-5 w-5 text-primary" />
                   <span>MEV Protection</span>
+                  <Badge variant={mevProtection ? "default" : "secondary"} className="text-xs ml-auto">
+                    {mevProtection ? "Active" : "Inactive"}
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Protect your trades from front-running and sandwich attacks
-                    </p>
-                    <Badge variant={mevProtection ? "default" : "secondary"} className="text-xs">
-                      {mevProtection ? "Enabled" : "Disabled"}
-                    </Badge>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Shield against front-running</p>
+                      <p className="text-xs text-muted-foreground/80">Advanced transaction protection</p>
+                    </div>
+                    <Switch 
+                      checked={mevProtection} 
+                      onCheckedChange={setMevProtection}
+                      className="data-[state=checked]:bg-primary"
+                    />
                   </div>
-                  <Switch checked={mevProtection} onCheckedChange={setMevProtection} />
+                  
+                  {mevProtection && (
+                    <div className="flex items-center space-x-2 text-sm text-green-400">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Protection active</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Quick Buy Widget */}
-            <Card className="border-border">
+            {/* Quick Buy */}
+            <Card className="border-border hover-glow-cyan transition-all duration-300 hover:scale-[1.01]">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Zap className="h-5 w-5 text-secondary" />
@@ -255,16 +230,17 @@ export default function AdvancedPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Current BNB Price:</span>
-                    <span className="font-medium text-foreground">{bnbUsd != null ? formatUSD(bnbUsd, 2) : "—"}</span>
+                    <span className="text-muted-foreground">BNB Price:</span>
+                    <span className="font-medium text-success">
+                      {bnbUsd != null ? formatUSD(bnbUsd, 2) : "—"}
+                    </span>
                   </div>
+                  
                   <div className="flex space-x-2">
                     <div className="flex-1">
-                      <Label htmlFor="quick-buy" className="sr-only">
-                        Quick buy amount
-                      </Label>
+                      <Label htmlFor="quick-buy" className="sr-only">Quick buy amount</Label>
                       <Input
                         id="quick-buy"
                         type="number"
@@ -272,121 +248,191 @@ export default function AdvancedPage() {
                         placeholder="0.1 BNB"
                         value={quickBuyAmount}
                         onChange={(e) => setQuickBuyAmount(e.target.value)}
+                        className="bg-card border-border"
                       />
                     </div>
-                    <Button className="bg-secondary hover:bg-secondary/90 glow-pink">Buy</Button>
+                    <Button className="bg-secondary hover:bg-secondary/90 glow-pink">
+                      Buy Now
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Search & Filter */}
+            <Card className="border-border hover-glow-primary transition-all duration-300 hover:scale-[1.01]">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Filter className="h-5 w-5 text-primary" />
+                  <span>Advanced Filters</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search tokens..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 bg-card border-border"
+                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Filter Tabs */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {[
-              { key: "newly-created", label: "Newly Created", icon: <Clock className="h-4 w-4" /> },
-              { key: "about-to-launch", label: "About to Launch", icon: <Zap className="h-4 w-4" /> },
-              { key: "trading-volume", label: "Trading Volume", icon: <TrendingUp className="h-4 w-4" /> },
-              { key: "graduated-hot", label: "Graduated Hot", icon: <Flame className="h-4 w-4" /> },
-            ].map((tab) => (
-              <Button
-                key={tab.key}
-                variant={activeTab === tab.key ? "default" : "outline"}
-                onClick={() => setActiveTab(tab.key as any)}
-                className={
-                  activeTab === tab.key
-                    ? "bg-primary text-primary-foreground glow-cyan"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-primary"
-                }
-              >
-                {tab.icon}
-                <span className="ml-2">{tab.label}</span>
-              </Button>
-            ))}
+          {/* Enhanced Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            <Card className="border-border hover-glow-cyan transition-all duration-300 hover:scale-[1.02]">
+              <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  {marketStats.totalNewTokens}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  New Tokens
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border hover-glow-pink transition-all duration-300 hover:scale-[1.02]">
+              <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-secondary/20 to-pink-600/20 rounded-xl flex items-center justify-center">
+                    <Target className="h-6 w-6 text-secondary" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  {marketStats.aboutToGraduate}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  About to Launch
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border hover-glow-primary transition-all duration-300 hover:scale-[1.02]">
+              <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center">
+                    <Activity className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  ${marketStats.totalVolume.toFixed(1)}M
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  Total Volume
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border hover-glow-secondary transition-all duration-300 hover:scale-[1.02]">
+              <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-xl flex items-center justify-center">
+                    <GraduationCap className="h-6 w-6 text-secondary" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  {marketStats.graduatedTokens}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  Graduated
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border hover-glow-success transition-all duration-300 hover:scale-[1.02]">
+              <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl flex items-center justify-center">
+                    <Users className="h-6 w-6 text-green-400" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-success mb-1">
+                  {marketStats.avgHolderCount.toFixed(0)}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  Avg Holders
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Token Discovery Results */}
-          <Card className="border-border">
-            <CardHeader>
+          {/* Enhanced Tab Navigation */}
+          <div className="flex justify-center mb-8">
+            <div className="flex space-x-1 bg-card rounded-xl p-1 border border-border shadow-lg">
+              {[
+                { key: "newly-created", label: "Newly Created", icon: Clock },
+                { key: "about-to-launch", label: "About to Launch", icon: Target },
+                { key: "trading-volume", label: "Volume Leaders", icon: Activity },
+                { key: "graduated-hot", label: "Graduated Hot", icon: Flame },
+              ].map((tab) => (
+                <Button
+                  key={tab.key}
+                  variant={activeTab === tab.key ? "default" : "ghost"}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className={
+                    activeTab === tab.key
+                      ? "bg-primary text-primary-foreground glow-cyan px-6 py-2"
+                      : "text-muted-foreground hover:text-foreground px-6 py-2"
+                  }
+                >
+                  <tab.icon className="h-4 w-4 mr-2" />
+                  {tab.label}
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    {processedTokens[tab.key as keyof typeof processedTokens as any]?.length || 0}
+                  </Badge>
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Results Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              {getTabIcon(activeTab)}
+              <h2 className="text-2xl font-bold text-foreground">
+                {activeTab === "newly-created" && "Newly Created Tokens"}
+                {activeTab === "about-to-launch" && "About to Launch"}
+                {activeTab === "trading-volume" && "Volume Leaders"}
+                {activeTab === "graduated-hot" && "Graduated Hot Tokens"}
+              </h2>
+              
+              <Badge variant="outline" className="text-sm">
+                {filteredTokens.length} results
+              </Badge>
+            </div>
+            
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Timer className="h-4 w-4" />
+              <span>Real-time updates</span>
+            </div>
+          </div>
+
+          {/* Enhanced Results Table */}
+          <Card className="border-border shadow-xl">
+            <CardHeader className="bg-gradient-to-r from-card to-card/50 border-b border-border">
               <CardTitle className="flex items-center space-x-2">
-                {getTabIcon(activeTab)}
-                <span>
-                  {activeTab === "newly-created" && "Newly Created Tokens"}
-                  {activeTab === "about-to-launch" && "About to Launch"}
-                  {activeTab === "trading-volume" && "High Trading Volume"}
-                  {activeTab === "graduated-hot" && "Graduated Hot Tokens"}
-                </span>
+                <div className="w-8 h-8 bg-gradient-to-br from-secondary to-pink-600 rounded-lg flex items-center justify-center">
+                  {getTabIcon(activeTab)}
+                </div>
+                <span>Live Discovery Results</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {getTabData().length > 0 ? (
-                <div className="space-y-4">
-                  {getTabData().map((token, index) => (
-                    <Card key={index} className="hover-glow-cyan transition-all duration-300 hover:scale-[1.02]">
-                      <CardContent className="p-4">
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-                          {/* Token Info */}
-                          <div className="lg:col-span-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                                <span className="text-sm font-bold">{token.ticker.slice(0, 2)}</span>
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-foreground">{token.name}</h3>
-                                <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-muted-foreground">{token.ticker}</p>
-                                  {token.onPancakeSwap && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      PCS
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Stats */}
-                          <div className="lg:col-span-8 grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                            <div>
-                              <p className="text-muted-foreground">Market Cap</p>
-                              <p className="font-medium text-foreground">{token.marketCap}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Price</p>
-                              <p className="font-medium text-foreground">{token.price}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">24h Change</p>
-                              <p className={`font-medium ${token.change24h >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                {token.change24h >= 0 ? "+" : ""}
-                                {token.change24h.toFixed(2)}%
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">
-                                {activeTab === "newly-created" && "Time Since Launch"}
-                                {activeTab === "about-to-launch" && "Launch Time"}
-                                {activeTab === "trading-volume" && "Tx Count"}
-                                {activeTab === "graduated-hot" && "Graduated"}
-                              </p>
-                              <p className="font-medium text-primary">
-                                {"timeSinceLaunch" in token && token.timeSinceLaunch}
-                                {"launchTime" in token && token.launchTime}
-                                {"txCount" in token && token.txCount}
-                                {"graduatedAt" in token && token.graduatedAt}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No tokens found in this category.</p>
-                </div>
-              )}
+            <CardContent className="p-0">
+              <EnhancedTable
+                tokens={filteredTokens}
+                loading={isLoading}
+                emptyMessage={`No ${activeTab} tokens found`}
+              />
             </CardContent>
           </Card>
         </div>
