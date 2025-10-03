@@ -1,8 +1,8 @@
 export type Address = `0x${string}`
 
 export const BNB_ADDRESSES = {
-  registry: "0xB0E0E8B8cd486adb5b0A1Ea1AaFB1449F8065516" as Address,
-  factory: "0xDf686F4dD229DBa0E1A7E06A8e720384c30aE809" as Address,
-  lpLocker: "0x25BB660fA411D38BC46D0f1C7bC45Aa4e9f2F5e9" as Address,
-  bondingCurveLaunch: "0x1fCDdBbDdecF993C5DC18d886902D7a0052ADA6e" as Address,
+  registry: "0xb169cdB282696fb30f2998aCFf44b69f3d9bbD27" as Address,
+  factory: "0xe252dD1291C3662121B1AfFF48FDD5A4dE360608" as Address,
+  lpLocker: "0x2703C2eeE7847a5ABc4105F3D8882Ee3E6795dF9" as Address,
+  bondingCurveLaunch: "0x14F9F5F8454a5aB9F8A5eDBFd54BC01E2B19d4e1" as Address,
 } as const

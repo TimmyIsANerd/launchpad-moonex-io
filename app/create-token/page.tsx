@@ -38,7 +38,7 @@ export default function CreateTokenPage() {
     ticker: "",
     description: "",
     raisedToken: "BNB",
-    raiseAmount: "",
+    raiseAmount: "18",
     website: "",
     twitter: "",
     telegram: "",
@@ -162,19 +162,15 @@ export default function CreateTokenPage() {
       console.log('✅ Description valid')
     }
 
-    if (!formData.raiseAmount || parseFloat(formData.raiseAmount) <= 0) {
-      newErrors.raiseAmount = "Valid raise amount is required"
-      console.log('❌ Raise amount invalid:', formData.raiseAmount)
-    } else {
-      try {
-        // Convert ETH to Wei for validation - ensure it's a valid number
-        const ethAmount = parseFloat(formData.raiseAmount)
-        const weiAmount = parseEther(ethAmount.toString())
-        console.log('✅ Raise amount valid:', `${ethAmount} ETH = ${weiAmount.toString()} Wei`)
-      } catch (error) {
-        newErrors.raiseAmount = "Invalid ETH amount format"
-        console.log('❌ Raise amount parse error:', error)
-      }
+    // Raise amount is fixed to 18 BNB - always valid
+    try {
+      const ethAmount = parseFloat(formData.raiseAmount)
+      const weiAmount = parseEther(ethAmount.toString())
+      console.log('✅ Raise amount valid (fixed):', `${ethAmount} BNB = ${weiAmount.toString()} Wei`)
+    } catch (error) {
+      // This should never happen with fixed value, but just in case
+      newErrors.raiseAmount = "Invalid BNB amount format"
+      console.log('❌ Raise amount parse error:', error)
     }
 
     if (!formData.feeRecipient) {

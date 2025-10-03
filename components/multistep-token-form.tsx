@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { SquareImageUpload } from "@/components/square-image-upload"
 import { EnhancedStepIndicator } from "@/components/enhanced-step-indicator"
+import { motion, AnimatePresence } from "framer-motion"
 import { 
   Wallet, 
   Rocket, 
@@ -21,7 +22,10 @@ import {
   DollarSign,
   Globe,
   Settings,
-  CheckCircle
+  CheckCircle,
+  Sparkles,
+  Shield,
+  TrendingUp
 } from "lucide-react"
 import { toast } from "sonner"
 import { parseEther } from "viem"
@@ -122,7 +126,7 @@ export function MultistepTokenForm({
       case 1: return isConnected
       case 2: return formData.logo !== null
       case 3: return formData.name?.trim() && formData.ticker?.trim() && formData.description?.trim() && formData.ticker.length >= 2 && formData.description.length >= 20 && tickerCheck.available !== false
-      case 4: return formData.raiseAmount && parseFloat(formData.raiseAmount) > 0
+      case 4: return true // Fixed raise amount of 18 BNB
       case 5: return true
       case 6: return formData.feeRecipient && /^0x[a-fA-F0-9]{40}$/.test(formData.feeRecipient) && formData.feePercentage >= 1 && formData.feePercentage <= 3
       case 7: return true
@@ -172,17 +176,8 @@ export function MultistepTokenForm({
         return true
 
       case 4: // Funding step
-        if (!formData.raiseAmount || parseFloat(formData.raiseAmount) <= 0) {
-          toast.error("💰 Please enter a valid raise amount to continue")
-          return false
-        }
-        try {
-          parseEther(formData.raiseAmount)
-          return true
-        } catch (error) {
-          toast.error("💰 Please enter a valid ETH amount (e.g., 1.5)")
-          return false
-        }
+        // Fixed raise amount of 18 BNB - always valid
+        return true
 
       case 5: // Social step
         return true // Social links are optional
@@ -228,239 +223,564 @@ export function MultistepTokenForm({
     switch (currentStep) {
       case 1: // Wallet Connection Status
         return (
-          <div className="space-y-6">
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <Wallet className="h-10 w-10 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground">Connect Your Wallet</h3>
-                <p className="text-muted-foreground">
-                  Connect your wallet to create and launch tokens on MoonEx
+          <div className="space-y-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center space-y-6"
+            >
+              <motion.div 
+                className="mx-auto w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg"
+                animate={{ 
+                  boxShadow: isConnected 
+                    ? "0 0 30px rgba(34, 197, 94, 0.3)" 
+                    : "0 0 20px rgba(59, 130, 246, 0.2)" 
+                }}
+                transition={{ duration: 0.5 }}
+              >
+                <Wallet className="h-12 w-12 text-primary" />
+              </motion.div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-foreground">
+                  {isConnected ? "Wallet Connected!" : "Connect Your Wallet"}
+                </h3>
+                <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  {isConnected 
+                    ? "Great! Your wallet is connected and ready to create tokens on MoonEx" 
+                    : "Connect your wallet to create and launch tokens on the MoonEx platform"
+                  }
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <Card className="border-border">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Wallet className="h-6 w-6 text-primary" />
-                    <div>
-                      <h3 className="font-semibold text-foreground">Wallet Connection</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {isConnected ? "Wallet connected successfully" : "Connect your wallet to launch tokens"}
-                      </p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className={`border-2 transition-all duration-300 ${
+                isConnected 
+                  ? "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20" 
+                  : "border-border/50 bg-card/50"
+              }`}>
+                <CardContent className="p-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        isConnected 
+                          ? "bg-green-100 dark:bg-green-900/30" 
+                          : "bg-primary/10"
+                      }`}>
+                        {isConnected ? (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.3, type: "spring" }}
+                          >
+                            <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                          </motion.div>
+                        ) : (
+                          <Wallet className="h-6 w-6 text-primary" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground text-lg">
+                          {isConnected ? "Wallet Connected" : "Wallet Connection"}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {isConnected 
+                            ? `Connected to ${address?.slice(0, 6)}...${address?.slice(-4)}` 
+                            : "Connect your wallet to launch tokens"
+                          }
+                        </p>
+                      </div>
                     </div>
+                    
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      {isConnected ? (
+                        <Badge className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 text-sm font-medium">
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Connected
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="px-4 py-2 text-sm">
+                          Not Connected
+                        </Badge>
+                      )}
+                    </motion.div>
                   </div>
-                  {isConnected ? (
-                    <Badge className="bg-green-500 text-white">Connected</Badge>
-                  ) : (
-                    <Badge variant="secondary">Not Connected</Badge>
+                  
+                  {isConnected && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      transition={{ delay: 0.5 }}
+                      className="mt-6 pt-6 border-t border-border/50"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Shield className="h-4 w-4 text-green-500" />
+                          <span className="text-muted-foreground">Secure Connection</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <TrendingUp className="h-4 w-4 text-blue-500" />
+                          <span className="text-muted-foreground">Ready to Deploy</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Sparkles className="h-4 w-4 text-purple-500" />
+                          <span className="text-muted-foreground">MoonEx Platform</span>
+                        </div>
+                      </div>
+                    </motion.div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {!isConnected && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="text-center"
+              >
+                <p className="text-sm text-muted-foreground">
+                  Don't have a wallet? We recommend{" "}
+                  <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    MetaMask
+                  </a>{" "}
+                  or{" "}
+                  <a href="https://walletconnect.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    WalletConnect
+                  </a>
+                </p>
+              </motion.div>
+            )}
           </div>
         )
 
       case 2: // Logo Upload
         return (
-          <div className="space-y-6">
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <Image className="h-10 w-10 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground">Upload Token Logo</h3>
-                <p className="text-muted-foreground">
-                  Upload a high-quality logo for your token (Recommended: 500×500px)
+          <div className="space-y-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center space-y-6"
+            >
+              <motion.div 
+                className="mx-auto w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg"
+                animate={{ 
+                  boxShadow: formData.logo 
+                    ? "0 0 30px rgba(34, 197, 94, 0.3)" 
+                    : "0 0 20px rgba(59, 130, 246, 0.2)" 
+                }}
+                transition={{ duration: 0.5 }}
+              >
+                <Image className="h-12 w-12 text-primary" />
+              </motion.div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-foreground">Upload Token Logo</h3>
+                <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Upload a high-quality logo that represents your token. This will be displayed across the platform.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <SquareImageUpload
-              onFileSelect={(file) => setFormData({ ...formData, logo: file })}
-              accept="image/*"
-              maxSize={5}
-              recommendedSize={{ width: 500, height: 500 }}
-            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="max-w-md mx-auto"
+            >
+              <SquareImageUpload
+                onFileSelect={(file) => setFormData({ ...formData, logo: file })}
+                accept="image/*"
+                maxSize={5}
+                recommendedSize={{ width: 500, height: 500 }}
+              />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-muted/30 rounded-xl p-6 border border-border/30"
+            >
+              <h4 className="font-semibold text-foreground mb-3 flex items-center">
+                <Sparkles className="h-5 w-5 text-primary mr-2" />
+                Logo Guidelines
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>Square format (1:1 ratio)</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>Minimum 500×500px</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>PNG, JPG, or SVG format</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    <span>High contrast design</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    <span>Clear and recognizable</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    <span>Maximum 5MB file size</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         )
 
       case 3: // Basic Details
         return (
-          <div className="space-y-6">
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <Type className="h-10 w-10 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground">Token Details</h3>
-                <p className="text-muted-foreground">
-                  Provide basic information about your token
+          <div className="space-y-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center space-y-6"
+            >
+              <motion.div 
+                className="mx-auto w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg"
+                animate={{ 
+                  boxShadow: (formData.name && formData.ticker && formData.description.length >= 20)
+                    ? "0 0 30px rgba(34, 197, 94, 0.3)" 
+                    : "0 0 20px rgba(59, 130, 246, 0.2)" 
+                }}
+                transition={{ duration: 0.5 }}
+              >
+                <Type className="h-12 w-12 text-primary" />
+              </motion.div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-foreground">Token Details</h3>
+                <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Provide essential information about your token that will be displayed to potential investors.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">Token Name *</Label>
-                <Input
-                id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Moon Doge"
-                  className={errors.name ? "border-destructive" : ""}
-                />
-                {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ticker">Token Symbol *</Label>
-                <div className="relative">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="space-y-6"
+              >
+                <div className="space-y-3">
+                  <Label htmlFor="name" className="text-base font-semibold flex items-center">
+                    Token Name *
+                    <span className="ml-2 text-xs text-muted-foreground">(Public display name)</span>
+                  </Label>
                   <Input
-                    id="ticker"
-                    value={formData.ticker}
-                    onChange={(e) => setFormData({ ...formData, ticker: e.target.value.toUpperCase() })}
-                    placeholder="e.g., MOONDOGE"
-                    className={`${errors.ticker ? "border-destructive" : ""} ${tickerCheck.available ? "border-green-500" : tickerCheck.available === false ? "border-destructive" : ""}`}
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Moon Doge"
+                    className={`h-12 text-lg ${errors.name ? "border-destructive focus:border-destructive" : "border-border/50 focus:border-primary"} transition-all duration-200`}
                   />
-                  {tickerCheck.loading && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    </div>
+                  {errors.name && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-destructive flex items-center"
+                    >
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.name}
+                    </motion.p>
                   )}
                 </div>
-                {errors.ticker && <p className="text-sm text-destructive">{errors.ticker}</p>}
-                {tickerCheck.message && (
-                  <p className={`text-sm ${tickerCheck.available ? 'text-green-600' : 'text-destructive'}`}>
-                    {tickerCheck.message}
-                  </p>
-                )}
-                {tickerCheck.suggestion && (
-                  <p className="text-sm text-blue-600">
-                    Try: {tickerCheck.suggestion}
-                  </p>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Token Description *</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe your token, its purpose, and why people should invest..."
-                  className={`min-h-[100px] ${errors.description ? "border-destructive" : ""}`}
-                />
-                {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
-                <p className="text-xs text-muted-foreground">
-                  {formData.description.length} characters
-                </p>
-              </div>
+                <div className="space-y-3">
+                  <Label htmlFor="ticker" className="text-base font-semibold flex items-center">
+                    Token Symbol *
+                    <span className="ml-2 text-xs text-muted-foreground">(Trading symbol)</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="ticker"
+                      value={formData.ticker}
+                      onChange={(e) => setFormData({ ...formData, ticker: e.target.value.toUpperCase() })}
+                      placeholder="e.g., MOONDOGE"
+                      className={`h-12 text-lg font-mono ${
+                        errors.ticker ? "border-destructive focus:border-destructive" : 
+                        tickerCheck.available ? "border-green-500 focus:border-green-500" : 
+                        tickerCheck.available === false ? "border-destructive focus:border-destructive" : 
+                        "border-border/50 focus:border-primary"
+                      } transition-all duration-200`}
+                    />
+                    {tickerCheck.loading && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <motion.div 
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <AnimatePresence>
+                    {errors.ticker && (
+                      <motion.p 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="text-sm text-destructive flex items-center"
+                      >
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.ticker}
+                      </motion.p>
+                    )}
+                    
+                    {tickerCheck.message && (
+                      <motion.p 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className={`text-sm flex items-center ${
+                          tickerCheck.available ? 'text-green-600' : 'text-destructive'
+                        }`}
+                      >
+                        {tickerCheck.available ? (
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 mr-1" />
+                        )}
+                        {tickerCheck.message}
+                      </motion.p>
+                    )}
+                    
+                    {tickerCheck.suggestion && (
+                      <motion.p 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="text-sm text-blue-600 flex items-center"
+                      >
+                        <Sparkles className="h-4 w-4 mr-1" />
+                        Suggestion: {tickerCheck.suggestion}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
 
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Meme">Meme Coin</SelectItem>
-                    <SelectItem value="Utility">Utility Token</SelectItem>
-                    <SelectItem value="DeFi">DeFi Protocol</SelectItem>
-                    <SelectItem value="NFT">NFT Collection</SelectItem>
-                    <SelectItem value="Gaming">Gaming</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="space-y-6"
+              >
+                <div className="space-y-3">
+                  <Label htmlFor="description" className="text-base font-semibold flex items-center">
+                    Token Description *
+                    <span className="ml-2 text-xs text-muted-foreground">(Min. 20 characters)</span>
+                  </Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Describe your token's purpose, utility, and what makes it unique. This will help investors understand your project..."
+                    className={`min-h-[120px] text-base resize-none ${
+                      errors.description ? "border-destructive focus:border-destructive" : "border-border/50 focus:border-primary"
+                    } transition-all duration-200`}
+                  />
+                  <div className="flex justify-between items-center">
+                    {errors.description ? (
+                      <motion.p 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-destructive flex items-center"
+                      >
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.description}
+                      </motion.p>
+                    ) : (
+                      <div />
+                    )}
+                    <p className={`text-xs transition-colors ${
+                      formData.description.length >= 20 ? 'text-green-600' : 'text-muted-foreground'
+                    }`}>
+                      {formData.description.length}/20 characters
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="category" className="text-base font-semibold">Category</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  >
+                    <SelectTrigger className="h-12 text-base border-border/50 focus:border-primary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Meme">🎭 Meme Coin</SelectItem>
+                      <SelectItem value="Utility">🔧 Utility Token</SelectItem>
+                      <SelectItem value="DeFi">💰 DeFi Protocol</SelectItem>
+                      <SelectItem value="NFT">🎨 NFT Collection</SelectItem>
+                      <SelectItem value="Gaming">🎮 Gaming</SelectItem>
+                      <SelectItem value="Other">📦 Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </motion.div>
             </div>
           </div>
         )
 
       case 4: // Funding
         return (
-          <div className="space-y-6">
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <DollarSign className="h-10 w-10 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground">Funding Goals</h3>
-                <p className="text-muted-foreground">
-                  Set your fundraising targets and tokenomics
+          <div className="space-y-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center space-y-6"
+            >
+              <motion.div 
+                className="mx-auto w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg"
+                animate={{ 
+                  boxShadow: "0 0 30px rgba(34, 197, 94, 0.3)"
+                }}
+                transition={{ duration: 0.5 }}
+              >
+                <DollarSign className="h-12 w-12 text-primary" />
+              </motion.div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-foreground">Funding Configuration</h3>
+                <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Standard funding configuration for MoonEx token launches
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="raisedToken">Raised Token</Label>
-                <Select
-                  value={formData.raisedToken}
-                  onValueChange={(value) => setFormData({ ...formData, raisedToken: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BNB">BNB</SelectItem>
-                    <SelectItem value="USDT">USDT</SelectItem>
-                    <SelectItem value="BUSD">BUSD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="raiseAmount">Raise Amount *</Label>
-                <Input
-                  id="raiseAmount"
-                  type="number"
-                  step="0.01"
-                  value={formData.raiseAmount}
-                  onChange={(e) => setFormData({ ...formData, raiseAmount: e.target.value })}
-                  placeholder="e.g., 100"
-                  className={errors.raiseAmount ? "border-destructive" : ""}
-                />
-                {errors.raiseAmount && <p className="text-sm text-destructive">{errors.raiseAmount}</p>}
-              </div>
-            </div>
-
-            {/* Cost Estimation */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-sm">Estimated Costs</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {estimatedCosts ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Gas Cost:</span>
-                      <span className="font-medium">{estimatedCosts.gasCost} BNB</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Platform Fee:</span>
-                      <span className="font-medium">{estimatedCosts.bnbCost} BNB</span>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="max-w-2xl mx-auto"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label htmlFor="raisedToken" className="text-base font-semibold flex items-center">
+                    Raised Token
+                    <span className="ml-2 text-xs text-muted-foreground">(Fixed)</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="raisedToken"
+                      value="BNB"
+                      disabled
+                      className="h-12 text-lg font-semibold bg-muted/50 cursor-not-allowed"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-white">B</span>
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={onEstimateCosts}
-                    disabled={!formData.raiseAmount}
-                  >
-                    Estimate Costs
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+                  <p className="text-xs text-muted-foreground">
+                    All MoonEx tokens raise funds in BNB (Binance Coin)
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="raiseAmount" className="text-base font-semibold flex items-center">
+                    Raise Amount
+                    <span className="ml-2 text-xs text-muted-foreground">(Standard)</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="raiseAmount"
+                      value="18"
+                      disabled
+                      className="h-12 text-lg font-semibold bg-muted/50 cursor-not-allowed"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <span className="text-sm font-medium text-muted-foreground">BNB</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Standard raise amount for fair token distribution
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Enhanced Information Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="border-border/50 bg-gradient-to-br from-card to-card/80">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-3 text-lg">
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                    </div>
+                    <span>Funding Details</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Total Raise Goal:</span>
+                        <span className="text-lg font-bold text-primary">18 BNB</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Platform Fee:</span>
+                        <span className="text-sm font-semibold">{formData.feePercentage}%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Estimated Gas:</span>
+                        <span className="text-sm font-semibold">~0.005 BNB</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Network:</span>
+                        <span className="text-sm font-semibold">BSC Mainnet</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center">
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Why 18 BNB?
+                    </h4>
+                    <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
+                      The 18 BNB standard ensures fair token distribution, provides sufficient initial liquidity, 
+                      and maintains consistency across all MoonEx launches for a better user experience.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         )
 
@@ -583,118 +903,198 @@ export function MultistepTokenForm({
 
       case 7: // Review & Submit
         return (
-          <div className="space-y-6">
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-10 w-10 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground">Review & Launch</h3>
-                <p className="text-muted-foreground">
-                  Review your token details before launching
+          <div className="space-y-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center space-y-6"
+            >
+              <motion.div 
+                className="mx-auto w-24 h-24 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 rounded-2xl flex items-center justify-center border border-green-200 dark:border-green-800 shadow-lg"
+                animate={{ 
+                  boxShadow: "0 0 30px rgba(34, 197, 94, 0.3)"
+                }}
+                transition={{ duration: 0.5 }}
+              >
+                <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400" />
+              </motion.div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-foreground">Ready to Launch!</h3>
+                <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Review your token details one final time before deploying to the blockchain.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Review Summary */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Rocket className="h-5 w-5 text-primary" />
-                  <span>Token Summary</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {formData.logo && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Logo</Label>
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                        <img 
-                          src={URL.createObjectURL(formData.logo)} 
-                          alt="Token logo" 
-                          className="w-full h-full object-cover"
-                        />
+            {/* Enhanced Review Summary */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="border-border/50 shadow-lg bg-gradient-to-br from-card to-card/80">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center space-x-3 text-xl">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center">
+                      <Rocket className="h-5 w-5 text-primary" />
+                    </div>
+                    <span>Token Summary</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  {/* Token Identity Section */}
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-foreground border-b border-border/50 pb-2">Token Identity</h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {formData.logo && (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.3 }}
+                          className="space-y-3"
+                        >
+                          <Label className="text-sm font-medium text-muted-foreground">Logo</Label>
+                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shadow-md border border-border/50">
+                            <img 
+                              src={URL.createObjectURL(formData.logo)} 
+                              alt="Token logo" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                      
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Token Name</Label>
+                        <p className="text-lg font-semibold text-foreground">{formData.name}</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Symbol</Label>
+                        <div className="inline-flex items-center bg-primary/10 border border-primary/20 px-3 py-2 rounded-lg">
+                          <span className="text-sm font-mono font-bold text-primary">{formData.ticker}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Token Details Section */}
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-foreground border-b border-border/50 pb-2">Token Details</h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Category</Label>
+                        <div className="inline-flex items-center bg-muted/50 px-3 py-2 rounded-lg">
+                          <span className="text-sm font-medium">{formData.category}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Raise Goal</Label>
+                        <p className="text-lg font-semibold text-foreground">
+                          {formData.raiseAmount} {formData.raisedToken}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                      <div className="bg-muted/30 rounded-lg p-4 border border-border/30">
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {formData.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Configuration Section */}
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-foreground border-b border-border/50 pb-2">Configuration</h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Platform Fee</Label>
+                        <p className="text-lg font-semibold text-foreground">{formData.feePercentage}%</p>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Fee Recipient</Label>
+                        <p className="text-sm font-mono text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+                          {formData.feeRecipient.slice(0, 6)}...{formData.feeRecipient.slice(-4)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Social Links Section */}
+                  {(formData.website || formData.twitter || formData.telegram) && (
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-foreground border-b border-border/50 pb-2">Social Presence</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {formData.website && (
+                          <div className="flex items-center space-x-2 text-sm bg-muted/30 px-3 py-2 rounded-lg">
+                            <Globe className="h-4 w-4 text-blue-500" />
+                            <span className="truncate">{formData.website}</span>
+                          </div>
+                        )}
+                        {formData.twitter && (
+                          <div className="flex items-center space-x-2 text-sm bg-muted/30 px-3 py-2 rounded-lg">
+                            <span className="text-blue-400">🐦</span>
+                            <span className="truncate">{formData.twitter}</span>
+                          </div>
+                        )}
+                        {formData.telegram && (
+                          <div className="flex items-center space-x-2 text-sm bg-muted/30 px-3 py-2 rounded-lg">
+                            <span className="text-blue-500">💬</span>
+                            <span className="truncate">{formData.telegram}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
-                  
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Name</Label>
-                    <p className="text-sm">{formData.name}</p>
-                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Symbol</Label>
-                    <p className="text-sm font-mono bg-muted px-2 py-1 rounded text-xs">
-                      {formData.ticker}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Category</Label>
-                    <p className="text-sm">{formData.category}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Description</Label>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {formData.description}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Raise Goal</Label>
-                    <p className="text-sm">
-                      {formData.raiseAmount} {formData.raisedToken}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Platform Fee</Label>
-                    <p className="text-sm">{formData.feePercentage}%</p>
-                  </div>
-                </div>
-
-                {(formData.website || formData.twitter || formData.telegram) && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Social Links</Label>
-                    <div className="space-y-1">
-                      {formData.website && <p className="text-sm">🌐 {formData.website}</p>}
-                      {formData.twitter && <p className="text-sm">🐦 {formData.twitter}</p>}
-                      {formData.telegram && <p className="text-sm">💬 {formData.telegram}</p>}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Launch Button */}
-            <div className="text-center">
+            {/* Enhanced Launch Button */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-center space-y-4"
+            >
               <Button
                 type="button"
                 onClick={onSubmit}
                 disabled={!canProceed() || isSubmitting}
-                className="px-8 py-3"
+                className="px-12 py-4 text-lg bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all duration-200 group"
                 size="lg"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {creationPhase === 'validating' && 'Validating...'}
-                    {creationPhase === 'uploading' && 'Uploading...'}
-                    {creationPhase === 'preparing' && 'Preparing...'}
-                    {creationPhase === 'deploying' && 'Deploying...'}
-                    {(creationPhase === 'complex' || creationPhase === 'idle') && 'Creating...'}
+                    <motion.div 
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3"
+                    />
+                    {creationPhase === 'validating' && 'Validating Details...'}
+                    {creationPhase === 'uploading' && 'Uploading Assets...'}
+                    {creationPhase === 'preparing' && 'Preparing Launch...'}
+                    {creationPhase === 'deploying' && 'Deploying to Blockchain...'}
+                    {(creationPhase === 'complete' || creationPhase === 'idle') && 'Creating Token...'}
                   </>
                 ) : (
                   <>
-                    <Rocket className="h-5 w-5 mr-2" />
-                    Launch Token
+                    <Rocket className="h-5 w-5 mr-3 group-hover:translate-y-[-2px] transition-transform" />
+                    Launch Token on MoonEx
                   </>
                 )}
               </Button>
-            </div>
+              
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                By launching your token, you agree to MoonEx's terms of service and confirm that all information provided is accurate.
+              </p>
+            </motion.div>
           </div>
         )
 
@@ -717,24 +1117,32 @@ export function MultistepTokenForm({
         }}
       />
 
-      {/* Step Content */}
-      <Card className="border-border">
-        <CardContent className="p-8">
-          {renderStepContent()}
-        </CardContent>
-      </Card>
+      {/* Step Content with Enhanced Animation */}
+      <motion.div
+        key={currentStep}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      >
+        <Card className="border-border/50 shadow-lg bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
+          <CardContent className="p-8 lg:p-12">
+            {renderStepContent()}
+          </CardContent>
+        </Card>
+      </motion.div>
 
-      {/* Navigation */}
-      <div className="flex justify-between gap-4">
+      {/* Enhanced Navigation */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
         <Button
           type="button"
           variant="outline"
           onClick={prevStep}
           disabled={currentStep === 1 || isSubmitting}
-          className="px-6"
+          className="px-8 py-3 border-border/50 hover:bg-muted/50 transition-all duration-200 group"
         >
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Previous</span>
+          <ChevronLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+          <span className="hidden sm:inline">Previous Step</span>
           <span className="sm:hidden">Back</span>
         </Button>
 
@@ -743,22 +1151,32 @@ export function MultistepTokenForm({
             type="button"
             onClick={nextStep}
             disabled={!canProceed() || isSubmitting}
-            className="px-6 bg-primary hover:bg-primary/90 flex-1 max-w-xs"
+            className="px-8 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all duration-200 flex-1 sm:flex-none sm:min-w-[200px] group"
           >
-            <span className="hidden sm:inline">Next Step</span>
-            <span className="sm:hidden">Next</span>
-            <ChevronRight className="h-4 w-4 ml-2" />
+            <span className="hidden sm:inline">Continue to {formSteps[currentStep]?.title}</span>
+            <span className="sm:hidden">Next Step</span>
+            <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
         ) : null}
       </div>
 
-      {/* Mobile Completion Status */}
+      {/* Enhanced Mobile Helper */}
       {currentStep < 7 && (
-        <div className="md:hidden bg-muted/50 rounded-lg p-4">
-          <p className="text-sm text-muted-foreground text-center">
-            Complete all fields on this step to proceed to the next one
-          </p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="md:hidden bg-gradient-to-r from-muted/30 to-muted/50 rounded-xl p-4 border border-border/30"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+            <p className="text-sm text-muted-foreground">
+              {canProceed() 
+                ? `Ready to continue to ${formSteps[currentStep]?.title}` 
+                : "Complete all required fields to proceed"
+              }
+            </p>
+          </div>
+        </motion.div>
       )}
     </div>
   )
