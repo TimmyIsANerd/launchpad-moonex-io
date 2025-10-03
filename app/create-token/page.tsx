@@ -102,38 +102,72 @@ export default function CreateTokenPage() {
   const validateForm = () => {
     const newErrors: Partial<TokenFormData> = {}
 
+    // Debug logging for each validation
+    console.log('Validating form data:', {
+      name: formData.name,
+      ticker: formData.ticker,
+      description: formData.description,
+      raiseAmount: formData.raiseAmount,
+      feeRecipient: formData.feeRecipient,
+      feePercentage: formData.feePercentage,
+      logo: formData.logo ? 'File selected' : 'No file'
+    })
+
     if (!formData.name.trim()) {
       newErrors.name = "Token name is required"
+      console.log('❌ Name missing')
+    } else {
+      console.log('✅ Name valid')
     }
 
     if (!formData.ticker.trim()) {
       newErrors.ticker = "Token ticker is required"
+      console.log('❌ Ticker missing')
     } else if (formData.ticker.length < 2) {
       newErrors.ticker = "Ticker must be at least 2 characters"
+      console.log('❌ Ticker too short')
+    } else {
+      console.log('✅ Ticker valid')
     }
 
     if (!formData.description.trim()) {
       newErrors.description = "Description is required"
+      console.log('❌ Description missing')
     } else if (formData.description.length < 20) {
       newErrors.description = "Description must be at least 20 characters"
+      console.log('❌ Description too short:', formData.description.length)
+    } else {
+      console.log('✅ Description valid')
     }
 
     if (!formData.raiseAmount || parseFloat(formData.raiseAmount) <= 0) {
       newErrors.raiseAmount = "Valid raise amount is required"
+      console.log('❌ Raise amount invalid:', formData.raiseAmount)
+    } else {
+      console.log('✅ Raise amount valid')
     }
 
     if (!formData.feeRecipient) {
       newErrors.feeRecipient = "Fee recipient address is required"
+      console.log('❌ Fee recipient missing')
     } else if (!/^0x[a-fA-F0-9]{40}$/.test(formData.feeRecipient)) {
       newErrors.feeRecipient = "Invalid wallet address format"
+      console.log('❌ Fee recipient invalid format')
+    } else {
+      console.log('✅ Fee recipient valid')
     }
 
     if (formData.feePercentage < 1 || formData.feePercentage > 3) {
       newErrors.feePercentage = "Fee percentage must be between 1% and 3%"
+      console.log('❌ Fee percentage invalid:', formData.feePercentage)
+    } else {
+      console.log('✅ Fee percentage valid')
     }
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    const isValid = Object.keys(newErrors).length === 0
+    console.log('Final validation result:', isValid ? '✅ VALID' : '❌ INVALID', 'Errors:', newErrors)
+    return isValid
   }
 
   const estimateCosts = async () => {
@@ -161,8 +195,22 @@ export default function CreateTokenPage() {
       return
     }
 
-    if (!validateForm()) {
-      toast.error("Please fix the errors above")
+    const validationResult = validateForm()
+    console.log('Form validation result:', validationResult)
+    console.log('Current errors:', errors)
+    console.log('Form data:', formData)
+    
+    if (!validationResult) {
+      // Use setTimeout to ensure errors state is updated before showing toast
+      setTimeout(() => {
+        const errorMessages = Object.values(errors).filter(Boolean)
+        console.log('Validation errors (after state update):', errorMessages)
+        if (errorMessages.length > 0) {
+          toast.error(`Please fix the errors above: ${errorMessages.join(', ')}`)
+        } else {
+          toast.error("Please complete all required fields")
+        }
+      }, 100)
       return
     }
 
