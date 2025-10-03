@@ -65,7 +65,7 @@ class MoonExAPIClient {
   private token: string | null = null
 
   constructor(base_URL?: string) {
-    this.baseURL = base_URL || process.env.NEXT_PUBLIC_TERMINAL_API_URL || 'http://localhost:1337'
+    this.baseURL = base_URL || process.env.NEXT_PUBLIC_TERMINAL_API_URL || 'http://localhost:2000'
   }
 
   setToken(token: string) {

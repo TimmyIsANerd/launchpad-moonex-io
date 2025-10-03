@@ -260,7 +260,7 @@ export default function CreateTokenPage() {
       const launchData: LaunchPreparationData = {
         name: formData.name,
         ticker: formData.ticker,
-        description: formData.description,
+        desc: formData.description, // API expects 'desc' not 'description'
         logoUri: logoUri,
         feeRecipient: formData.feeRecipient,
         feePercentage: formData.feePercentage,
