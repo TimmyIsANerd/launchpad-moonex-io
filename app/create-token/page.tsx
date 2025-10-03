@@ -12,6 +12,8 @@ import { useWallet } from "@/components/wallet-provider"
 import { Wallet, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { parseEther, formatEther } from "viem"
+import { useDeploymentFlow } from "@/src/hooks/useTokenDeployment"
+import type { TokenDeploymentConfig } from "@/src/services/token-deployment"
 import { moonexApi, type LaunchPreparationData } from "@/lib/moonex-api"
 
 interface TokenFormData {
@@ -59,6 +61,25 @@ export default function CreateTokenPage() {
     bnbCost: string
   } | null>(null)
   const { isConnected, address } = useWallet()
+  const [createdMemeId, setCreatedMemeId] = useState<string>('')
+  
+  // Smart contract deployment hook
+  const {
+    deployCompleteFlow,
+    isDeploying,
+    deploymentProgress,
+    currentTransactionHash,
+    isConfirming
+  } = useDeploymentFlow({
+    onSuccess: (addresses) => {
+      toast.success(`🎉 Token deployed successfully! Contract: ${addresses.token}`)
+      setCreationPhase('complete')
+    },
+    onError: (error) => {
+      toast.error(`Deployment failed: ${error}`)
+      setCreationPhase('error')
+    }
+  })
 
   // Auto-populate fee recipient with current wallet address
   useEffect(() => {
@@ -198,7 +219,7 @@ export default function CreateTokenPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!isConnected) {
       toast.error("Please connect your wallet first")
       return
@@ -273,19 +294,44 @@ export default function CreateTokenPage() {
 
       console.log('Submitting launch data:', launchData)
       
-      // Start token creation process
+      // Start token creation process - create off-chain record
       const result = await moonexApi.prepareLaunch(launchData)
       
+      if (!result.data?._id) {
+        throw new Error('Failed to create token record')
+      }
+      
+      setCreatedMemeId(result.data._id)
+      console.log('✅ Off-chain record created:', result.data._id)
+
       setCreationPhase('deploying')
       
-      // Continue with deployment (placeholder for actual deployment logic)
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate deployment
+      // Prepare deployment configuration
+      const deploymentConfig: TokenDeploymentConfig = {
+        name: formData.name,
+        symbol: formData.ticker,
+        logoUri: logoUri || '',
+        feeRecipient: address as `0x${string}`,
+        feePercentage: formData.feePercentage,
+        raiseAmount: ethAmount
+      }
       
-      setCreationPhase('complete')
-      toast.success("Token created successfully!")
+      console.log('Deploying smart contract with config:', deploymentConfig)
       
-      // Redirect to token page or reset form
-      console.log("Token creation complete:", result)
+      // Deploy smart contract
+      const deploymentResult = await deployCompleteFlow(
+        result.data._id,
+        deploymentConfig,
+        address as `0x${string}`
+      )
+      
+      if (deploymentResult.success) {
+        setCreationPhase('complete')
+        toast.success("🚀 Token launched successfully!")
+        
+        // TODO: Redirect to token page
+        console.log("Smart contract deployment complete:", deploymentResult)
+      }
       
     } catch (error) {
       console.error("Token creation failed:", error)
@@ -299,7 +345,7 @@ export default function CreateTokenPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -359,59 +405,79 @@ export default function CreateTokenPage() {
 
           {/* Important Notice */}
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mt-8">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-destructive mb-1">Important Notice</h4>
-                <p className="text-sm text-destructive/80">
-                  Token creation is irreversible. Please double-check all information before launching. Ensure you
-                  have sufficient BNB for gas fees and initial liquidity.
-                </p>
-              </div>
-            </div>
-          </div>
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-destructive mb-1">Important Notice</h4>
+                      <p className="text-sm text-destructive/80">
+                        Token creation is irreversible. Please double-check all information before launching. Ensure you
+                        have sufficient BNB for gas fees and initial liquidity.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
           {/* Progress Indicator - Show when not idle */}
-          {creationPhase !== 'idle' && (
+                {creationPhase !== 'idle' && (
             <Card className="border-border mt-8">
               <CardContent className="p-6">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Token Creation Progress</span>
-                    <span className="text-xs text-muted-foreground">
-                      {creationPhase === 'validating' && 'Validating form...'}
-                      {creationPhase === 'uploading' && 'Uploading logo...'}
-                      {creationPhase === 'preparing' && 'Preparing launch data...'}
-                      {creationPhase === 'deploying' && 'Deploying to blockchain...'}
-                      {creationPhase === 'complete' && 'Complete!'}
-                      {creationPhase === 'error' && 'Error occurred'}
-                    </span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full transition-all duration-500 ${
-                        creationPhase === 'complete' ? 'bg-green-500 w-full' :
-                        creationPhase === 'error' ? 'bg-red-500 w-full' :
-                        'bg-primary'
-                      }`}
-                      style={{ 
-                        width: creationPhase === 'validating' ? '20%' :
-                               creationPhase === 'uploading' ? '40%' :
-                               creationPhase === 'preparing' ? '70%' :
-                               creationPhase === 'deploying' ? '90%' :
-                               '100%'
-                      }}
-                    ></div>
-                  </div>
-                  {estimatedCosts && (
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Estimated Gas: {estimatedCosts.gasCost}</span>
-                      <span>Estimated Cost: {estimatedCosts.bnbCost} BNB</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Token Creation Progress</span>
+                      <span className="text-xs text-muted-foreground">
+                        {creationPhase === 'validating' && 'Validating form...'}
+                        {creationPhase === 'uploading' && 'Uploading logo...'}
+                        {creationPhase === 'preparing' && 'Preparing launch data...'}
+                        {creationPhase === 'deploying' && (
+                          <div className="flex flex-col items-center space-y-2">
+                            <span>Deploying to blockchain...</span>
+                            {deploymentProgress && (
+                              <span className="text-sm text-muted-foreground">{deploymentProgress}</span>
+                            )}
+                            {currentTransactionHash && (
+                              <a 
+                                href={`https://testnet.bscscan.com/tx/${currentTransactionHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-500 hover:text-blue-600 underline"
+                              >
+                                View Transaction
+                              </a>
+                            )}
+                            {isConfirming && (
+                              <span className="text-xs text-yellow-600">Waiting for confirmation...</span>
+                            )}
+                          </div>
+                        )}
+                        {creationPhase === 'complete' && 'Complete!'}
+                        {creationPhase === 'error' && 'Error occurred'}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-500 ${
+                          creationPhase === 'complete' ? 'bg-green-500 w-full' :
+                          creationPhase === 'error' ? 'bg-red-500 w-full' :
+                          'bg-primary'
+                        }`}
+                        style={{ 
+                          width: creationPhase === 'validating' ? '20%' :
+                                 creationPhase === 'uploading' ? '40%' :
+                                 creationPhase === 'preparing' ? '70%' :
+                                 creationPhase === 'deploying' ? '90%' :
+                                 '100%'
+                        }}
+                      ></div>
+                    </div>
+                    {estimatedCosts && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Estimated Gas: {estimatedCosts.gasCost}</span>
+                        <span>Estimated Cost: {estimatedCosts.bnbCost} BNB</span>
+                      </div>
+                    )}
+                  </div>
+            </CardContent>
+          </Card>
           )}
         </div>
       </div>
