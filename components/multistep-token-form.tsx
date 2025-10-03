@@ -230,11 +230,11 @@ export function MultistepTokenForm({
               className="text-center space-y-6"
             >
               <motion.div 
-                className="mx-auto w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg"
+                className="mx-auto w-24 h-24 bg-card rounded-2xl flex items-center justify-center border border-primary/30 shadow-lg"
                 animate={{ 
                   boxShadow: isConnected 
-                    ? "0 0 30px rgba(34, 197, 94, 0.3)" 
-                    : "0 0 20px rgba(59, 130, 246, 0.2)" 
+                    ? "0 0 30px rgba(0, 192, 255, 0.3)" 
+                    : "0 0 20px rgba(0, 192, 255, 0.2)" 
                 }}
                 transition={{ duration: 0.5 }}
               >
@@ -261,15 +261,15 @@ export function MultistepTokenForm({
             >
               <Card className={`border-2 transition-all duration-300 ${
                 isConnected 
-                  ? "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20" 
-                  : "border-border/50 bg-card/50"
+                  ? "border-primary/30 bg-primary/5 glow-cyan" 
+                  : "border-border/50 bg-card"
               }`}>
                 <CardContent className="p-8">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                         isConnected 
-                          ? "bg-green-100 dark:bg-green-900/30" 
+                          ? "bg-primary/20 border border-primary/30" 
                           : "bg-primary/10"
                       }`}>
                         {isConnected ? (
@@ -278,7 +278,7 @@ export function MultistepTokenForm({
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.3, type: "spring" }}
                           >
-                            <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            <CheckCircle className="h-6 w-6 text-primary" />
                           </motion.div>
                         ) : (
                           <Wallet className="h-6 w-6 text-primary" />
@@ -303,7 +303,7 @@ export function MultistepTokenForm({
                       transition={{ delay: 0.4 }}
                     >
                       {isConnected ? (
-                        <Badge className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 text-sm font-medium">
+                        <Badge className="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 text-sm font-medium">
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Connected
                         </Badge>
@@ -324,15 +324,15 @@ export function MultistepTokenForm({
                     >
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="flex items-center space-x-2 text-sm">
-                          <Shield className="h-4 w-4 text-green-500" />
+                          <Shield className="h-4 w-4 text-primary" />
                           <span className="text-muted-foreground">Secure Connection</span>
                         </div>
                         <div className="flex items-center space-x-2 text-sm">
-                          <TrendingUp className="h-4 w-4 text-blue-500" />
+                          <TrendingUp className="h-4 w-4 text-secondary" />
                           <span className="text-muted-foreground">Ready to Deploy</span>
                         </div>
                         <div className="flex items-center space-x-2 text-sm">
-                          <Sparkles className="h-4 w-4 text-purple-500" />
+                          <Sparkles className="h-4 w-4 text-primary" />
                           <span className="text-muted-foreground">MoonEx Platform</span>
                         </div>
                       </div>
@@ -373,11 +373,11 @@ export function MultistepTokenForm({
               className="text-center space-y-6"
             >
               <motion.div 
-                className="mx-auto w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg"
+                className="mx-auto w-24 h-24 bg-card rounded-2xl flex items-center justify-center border border-primary/30 shadow-lg"
                 animate={{ 
                   boxShadow: formData.logo 
-                    ? "0 0 30px rgba(34, 197, 94, 0.3)" 
-                    : "0 0 20px rgba(59, 130, 246, 0.2)" 
+                    ? "0 0 30px rgba(0, 192, 255, 0.3)" 
+                    : "0 0 20px rgba(0, 192, 255, 0.2)" 
                 }}
                 transition={{ duration: 0.5 }}
               >
@@ -459,11 +459,11 @@ export function MultistepTokenForm({
               className="text-center space-y-6"
             >
               <motion.div 
-                className="mx-auto w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg"
+                className="mx-auto w-24 h-24 bg-card rounded-2xl flex items-center justify-center border border-primary/30 shadow-lg"
                 animate={{ 
                   boxShadow: (formData.name && formData.ticker && formData.description.length >= 20)
-                    ? "0 0 30px rgba(34, 197, 94, 0.3)" 
-                    : "0 0 20px rgba(59, 130, 246, 0.2)" 
+                    ? "0 0 30px rgba(0, 192, 255, 0.3)" 
+                    : "0 0 20px rgba(0, 192, 255, 0.2)" 
                 }}
                 transition={{ duration: 0.5 }}
               >
@@ -658,9 +658,9 @@ export function MultistepTokenForm({
               className="text-center space-y-6"
             >
               <motion.div 
-                className="mx-auto w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg"
+                className="mx-auto w-24 h-24 bg-card rounded-2xl flex items-center justify-center border border-primary/30 shadow-lg glow-cyan"
                 animate={{ 
-                  boxShadow: "0 0 30px rgba(34, 197, 94, 0.3)"
+                  boxShadow: "0 0 30px rgba(0, 192, 255, 0.3)"
                 }}
                 transition={{ duration: 0.5 }}
               >
@@ -910,13 +910,13 @@ export function MultistepTokenForm({
               className="text-center space-y-6"
             >
               <motion.div 
-                className="mx-auto w-24 h-24 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 rounded-2xl flex items-center justify-center border border-green-200 dark:border-green-800 shadow-lg"
+                className="mx-auto w-24 h-24 bg-card rounded-2xl flex items-center justify-center border border-primary shadow-lg glow-cyan"
                 animate={{ 
-                  boxShadow: "0 0 30px rgba(34, 197, 94, 0.3)"
+                  boxShadow: "0 0 30px rgba(0, 192, 255, 0.3)"
                 }}
                 transition={{ duration: 0.5 }}
               >
-                <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400" />
+                <CheckCircle className="h-12 w-12 text-primary" />
               </motion.div>
               
               <div className="space-y-2">
