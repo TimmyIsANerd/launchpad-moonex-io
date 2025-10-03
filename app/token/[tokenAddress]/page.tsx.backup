@@ -275,9 +275,7 @@ export default function TokenDetailPage({ params }: TokenDetailPageProps) {
             </Card>
             <Card className="border-border">
               <CardContent className="p-4 text-center">
-                <h3 className="text-lg font-bold text-foreground">
-                  {virtualLiquidityUSD ? formatUSD(virtualLiquidityUSD, 0).replace('.00', '') : "—"}
-                </h3>
+                <h3 className="text-lg font-bold text-muted-foreground">—</h3>
                 <p className="text-sm text-muted-foreground">Liquidity</p>
               </CardContent>
             </Card>
@@ -298,12 +296,7 @@ export default function TokenDetailPage({ params }: TokenDetailPageProps) {
                 tokenName={tokenName}
                 tokenSymbol={tokenSymbol}
               />
-              <TradesComments 
-                tokenTicker={tokenSymbol} 
-                tokenAddress={params.tokenAddress}
-                isWalletConnected={isConnected} 
-                trades={trades} 
-              />
+              <TradesComments tokenTicker={tokenSymbol} isWalletConnected={isConnected} trades={trades} />
             </div>
 
             {/* Right Column - Trading Panel */}

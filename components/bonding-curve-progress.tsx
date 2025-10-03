@@ -15,7 +15,12 @@ type Props = {
 }
 
 function formatNumber(n: number, opts: Intl.NumberFormatOptions = {}) {
-  return n.toLocaleString(undefined, { maximumFractionDigits: 8, ...opts })
+  if (n == null || Number.isNaN(n)) return "—"
+  return n.toLocaleString(undefined, { 
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6, 
+    ...opts 
+  })
 }
 
 export function BondingCurveProgress({
@@ -67,7 +72,7 @@ export function BondingCurveProgress({
             still available for sale in the bonding curve and there is {" "}
             <span className="font-mono font-medium text-foreground">{formatNumber(baseInCurve, { maximumFractionDigits: 8 })} {baseSymbol}</span>{" "}
             (Raised amount : {" "}
-            <span className="font-mono font-semibold text-emerald-400">{formatNumber(raised, { maximumFractionDigits: 8 })}{baseSymbol ? ` ${baseSymbol}` : ""}</span>) in the bonding curve.
+            <span className="font-mono font-semibold text-emerald-400">{raised.toFixed(4)}{baseSymbol ? ` ${baseSymbol}` : ""}</span>) in the bonding curve.
           </p>
 
           <p>

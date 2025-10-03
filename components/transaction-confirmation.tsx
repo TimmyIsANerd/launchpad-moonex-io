@@ -105,7 +105,7 @@ export function TransactionConfirmation({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
             <Card className="w-full max-w-md border-border">
               <CardHeader>
@@ -138,10 +138,6 @@ export function TransactionConfirmation({
                     <span className="font-medium text-foreground">{transaction.amount}</span>
                   </motion.div>
 
-                  <motion.div className="flex justify-between items-center" variants={staggerItem}>
-                    <span className="text-muted-foreground">Price:</span>
-                    <span className="font-medium text-foreground">{transaction.price}</span>
-                  </motion.div>
 
                   <motion.div className="flex justify-between items-center" variants={staggerItem}>
                     <span className="text-muted-foreground">Slippage:</span>
@@ -170,7 +166,7 @@ export function TransactionConfirmation({
                       animate={transaction.priceImpact > 5 ? { scale: [1, 1.1, 1] } : {}}
                       transition={{ duration: 0.5, repeat: Number.POSITIVE_INFINITY }}
                     >
-                      {transaction.priceImpact.toFixed(2)}%
+                      {transaction.priceImpact.toFixed(3)}%
                     </motion.span>
                   </motion.div>
 

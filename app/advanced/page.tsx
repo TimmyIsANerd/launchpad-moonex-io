@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Shield, Zap, Clock, TrendingUp, Flame, GraduationCap } from "lucide-react"
-import { useTokens } from "@/src/hooks/useTokens"
+import { useTokens } from "@/src/hooks/useTokensWithAPI"
 import { useBnbUsd } from "@/src/hooks/useBnbUsd"
 import { formatUSD } from "@/lib/format"
 

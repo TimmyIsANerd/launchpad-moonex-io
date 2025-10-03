@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react"
 import { useAccount, useBalance, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi"
-import { config, riseTestnet } from "@/lib/wagmi"
+import { config, bnbTestnet } from "@/lib/wagmi"
 
 interface WalletContextType {
   isConnected: boolean
@@ -10,6 +10,7 @@ interface WalletContextType {
   balance: {
     bnb: string // native balance; UI keeps "BNB" label for now as requested
     usdt: string // placeholder until USDT integration
+    token: string // token balance for the current token
   }
   connect: (walletId?: string) => Promise<void>
   disconnect: () => void
@@ -47,11 +48,12 @@ export function WalletProvider({ children }: WalletProviderProps) {
     () => ({
       bnb: nativeBal ? parseFloat(nativeBal.formatted).toFixed(4) : "0.00",
       usdt: "0.00",
+      token: "0.000000", // This will be overridden by BuySellPanel with actual token balance
     }),
     [nativeBal]
   )
 
-  const isCorrectNetwork = chainId === riseTestnet.id
+  const isCorrectNetwork = chainId === bnbTestnet.id
 
   const connect = async (walletId?: string) => {
     const pickInjected = () => connectors.find((c) => c.type === "injected" || c.id === "injected")
@@ -67,7 +69,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
     if (!target) throw new Error("No suitable connector found")
 
-    await connectAsync({ connector: target, chainId: riseTestnet.id })
+    await connectAsync({ connector: target, chainId: bnbTestnet.id })
   }
 
   const disconnect = () => {
@@ -75,7 +77,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   }
 
   const switchNetwork = async () => {
-    await switchChainAsync({ chainId: riseTestnet.id })
+    await switchChainAsync({ chainId: bnbTestnet.id })
   }
 
   const value: WalletContextType = {

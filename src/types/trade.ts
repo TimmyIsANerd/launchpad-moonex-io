@@ -5,4 +5,5 @@ export interface TradeItem {
   amount: string
   tokenAmount: string
   timestamp: string
+  rawTimestamp?: number
 }

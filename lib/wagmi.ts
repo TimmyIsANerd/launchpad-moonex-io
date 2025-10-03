@@ -4,8 +4,8 @@ import { cookieStorage, createConfig, http } from "wagmi"
 import { injected, walletConnect } from "@wagmi/connectors"
 import { defineChain } from "viem"
 
-const RISE_CHAIN_ID = 11155931
-const RISE_RPC_URL = process.env.NEXT_PUBLIC_RISE_RPC_URL as string
+const BNB_TESTNET_CHAIN_ID = 97
+const BNB_TESTNET_RPC_URL = process.env.BSC_TESTNET_RPC_URL as string
 const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID as string
 
 if (!WC_PROJECT_ID) {
@@ -13,30 +13,30 @@ if (!WC_PROJECT_ID) {
   // eslint-disable-next-line no-console
   console.warn("NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is missing")
 }
-if (!RISE_RPC_URL) {
+if (!BNB_TESTNET_RPC_URL) {
   // eslint-disable-next-line no-console
-  console.warn("NEXT_PUBLIC_RISE_RPC_URL is missing")
+  console.warn("BSC_TESTNET_RPC_URL is missing")
 }
 
-export const riseTestnet = defineChain({
-  id: RISE_CHAIN_ID,
-  name: "Rise Testnet",
-  network: "rise-testnet",
-  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+export const bnbTestnet = defineChain({
+  id: BNB_TESTNET_CHAIN_ID,
+  name: "BNB Smart Chain Testnet",
+  network: "bsc-testnet",
+  nativeCurrency: { name: "BNB", symbol: "tBNB", decimals: 18 },
   rpcUrls: {
-    default: { http: [RISE_RPC_URL || "https://testnet.riselabs.xyz"] },
-    public: { http: [RISE_RPC_URL || "https://testnet.riselabs.xyz"] },
+    default: { http: [BNB_TESTNET_RPC_URL || "https://bsc-testnet-rpc.publicnode.com"] },
+    public: { http: [BNB_TESTNET_RPC_URL || "https://bsc-testnet-rpc.publicnode.com"] },
   },
   blockExplorers: {
-    default: { name: "Blockscout", url: "https://explorer.testnet.riselabs.xyz/" },
+    default: { name: "BscScan", url: "https://testnet.bscscan.com/" },
   },
   testnet: true,
 })
 
 export const config = createConfig({
-  chains: [riseTestnet],
+  chains: [bnbTestnet],
   transports: {
-    [riseTestnet.id]: http(RISE_RPC_URL || "https://testnet.riselabs.xyz"),
+    [bnbTestnet.id]: http(BNB_TESTNET_RPC_URL || "https://bsc-testnet-rpc.publicnode.com"),
   },
   connectors: [
     injected({ shimDisconnect: true }),
@@ -52,5 +52,5 @@ export const config = createConfig({
     }),
   ],
   ssr: true,
-  storage: cookieStorage,
+  storage: cookieStorage as any,
 })

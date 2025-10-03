@@ -222,7 +222,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       {/* Trading Marquee */}
-      <TradingMarquee />
+      {/* <TradingMarquee /> */}
 
       {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 min-h-[600px] flex items-center">

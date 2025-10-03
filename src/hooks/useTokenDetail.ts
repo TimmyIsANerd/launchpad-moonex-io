@@ -6,9 +6,10 @@ function bnToFloat(x: any, decimals = 18): number {
   if (x === null || x === undefined) return 0
   const v = typeof x === "string" ? x : String(x)
   const big = BigInt(v)
-  const base = 10n ** BigInt(decimals)
+  // Calculate base using Math.pow to avoid BigInt exponentiation issues
+  const base = Math.pow(10, decimals)
   // Convert to JS number cautiously (ok for display ranges)
-  return Number(big) / Number(base)
+  return Number(big) / base
 }
 
 export type TokenDetail = {
@@ -21,6 +22,7 @@ export type TokenDetail = {
     createdAt: number
     displayName?: string | null
     logoURI?: string | null
+    totalSupply?: number | null
     stats?: {
       priceInBase?: number | null
       volume24hBase?: number | null
@@ -62,6 +64,7 @@ export function useTokenDetail(tokenId: string) {
           createdAt: Number(t.createdAt) * 1000,
           displayName: t.displayName ?? null,
           logoURI: t.logoURI ?? null,
+          totalSupply: t.totalSupply != null ? Number(t.totalSupply) : null,
           stats: t.stats
             ? {
                 priceInBase: t.stats.priceInBase != null ? Number(t.stats.priceInBase) : null,

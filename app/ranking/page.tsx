@@ -7,7 +7,7 @@ import { TokenTable } from "@/components/token-table"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, Volume2, Clock } from "lucide-react"
-import { useTokens } from "@/src/hooks/useTokens"
+import { useTokens } from "@/src/hooks/useTokensWithAPI"
 
 // Sample ranking data
 const marketCapTokens = [

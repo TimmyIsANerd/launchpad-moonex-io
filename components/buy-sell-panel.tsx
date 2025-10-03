@@ -13,10 +13,14 @@ import { motion, AnimatePresence } from "framer-motion"
 import { slideUp, staggerContainer, staggerItem, buttonPress, buttonGlow, spinnerRotate } from "@/lib/animations"
 import { toast } from "sonner"
 import { useWallet } from "@/components/wallet-provider"
-import { usePublicClient, useWriteContract } from "wagmi"
+import { usePublicClient, useWriteContract, useBalance } from "wagmi"
 import { parseEther, parseUnits, formatEther } from "viem"
 import { BondingCurveLaunchABI } from "@/abis"
 import { useQueryClient } from "@tanstack/react-query"
+import { usePriceForAmount } from "@/src/hooks/usePriceForAmount"
+import { usePriceImpact } from "@/src/hooks/usePriceImpact"
+import { useTokensForBNB } from "@/src/hooks/useTokensForBNB"
+import { useThresholdValidation, validatePurchaseAmount } from "@/src/hooks/useThresholdValidation"
 
 interface BuySellPanelProps {
   tokenName: string
@@ -28,9 +32,10 @@ interface BuySellPanelProps {
   tokenDecimals: number
   baseSymbol: string
   priceInBase?: number | null
+  isOnPancakeSwap?: boolean
 }
 
-export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletConnected = false, curveAddress, tokenAddress, tokenDecimals, baseSymbol, priceInBase }: BuySellPanelProps) {
+export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletConnected = false, curveAddress, tokenAddress, tokenDecimals, baseSymbol, priceInBase, isOnPancakeSwap = false }: BuySellPanelProps) {
   const [buyAmount, setBuyAmount] = useState("")
   const [buyError, setBuyError] = useState<string | null>(null)
   const [sellAmount, setSellAmount] = useState("")
@@ -42,16 +47,79 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
   )
   const [txHash, setTxHash] = useState<string | undefined>()
   const { balance: walletBalanceFromCtx, isCorrectNetwork, switchNetwork, address } = useWallet()
+  
+  // Fetch token balance using the token address
+  const { data: tokenBalance } = useBalance({
+    address: address as `0x${string}`,
+    token: tokenAddress as `0x${string}`,
+    query: {
+      enabled: !!address && !!tokenAddress,
+      refetchInterval: 10000, // Refetch every 10 seconds
+    },
+  })
+  
   const walletBalance = useMemo(() => ({
     bnb: walletBalanceFromCtx.bnb,
-    token: "1,250.00",
-  }), [walletBalanceFromCtx])
+    token: tokenBalance ? parseFloat(tokenBalance.formatted).toFixed(6) : "0.000000",
+  }), [walletBalanceFromCtx, tokenBalance])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [activePreset, setActivePreset] = useState<string | null>(null)
 
   const [currentTransaction, setCurrentTransaction] = useState<any>(null)
 
   const buyPresets = ["0.1", "0.5", "1"]
+
+  // Threshold validation function
+  const handleThresholdValidation = async (purchaseAmount: string) => {
+    if (!effectiveCurveAddress || !publicClient) {
+      setBuyError("Contract not available for validation")
+      return
+    }
+
+    try {
+      // Get current contract balance
+      const currentBalanceWei = await publicClient.getBalance({
+        address: effectiveCurveAddress as `0x${string}`
+      })
+      const currentBalanceBNB = Number(formatEther(currentBalanceWei))
+
+      // Get threshold
+      const thresholdWei = await publicClient.readContract({
+        address: effectiveCurveAddress as `0x${string}`,
+        abi: BondingCurveLaunchABI.abi,
+        functionName: "lpThreshold",
+      })
+      const thresholdBNB = Number(formatEther(thresholdWei as bigint))
+
+      // Get liquidity creation status
+      const liquidityCreated = await publicClient.readContract({
+        address: effectiveCurveAddress as `0x${string}`,
+        abi: BondingCurveLaunchABI.abi,
+        functionName: "liquidityCreated",
+      })
+
+      const purchaseAmountBNB = Number(purchaseAmount)
+      
+      const validation = validatePurchaseAmount(
+        purchaseAmountBNB,
+        currentBalanceBNB,
+        thresholdBNB,
+        liquidityCreated as boolean
+      )
+
+      if (!validation.isValid) {
+        setBuyError(validation.errorMessage || "Purchase validation failed")
+        return
+      }
+
+      // If validation passes, continue with transaction setup
+      proceedWithTransaction(purchaseAmount)
+
+    } catch (error) {
+      console.error("Threshold validation error:", error)
+      setBuyError("Failed to validate purchase against threshold")
+    }
+  }
   const sellPresets = [25, 50, 75, 100]
 
   const publicClient = usePublicClient()
@@ -60,20 +128,41 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
 
   const amountInputRef = useRef<HTMLInputElement>(null)
 
+  // Fallback to test curve address if GraphQL doesn't provide it
+  const effectiveCurveAddress = curveAddress || "0x8834f5fC7c4e97a88c2548E403e49312adE47b16"
+  
+  // Threshold validation hook
+  const { threshold, isLoading: thresholdLoading } = useThresholdValidation(effectiveCurveAddress, buyAmount)
+  
+  // Get accurate price for the current buy amount
+  const { priceInBNB: sellPriceInBNB } = usePriceForAmount(effectiveCurveAddress, sellAmount)
+  
+  // Get accurate tokens received for BNB amount when buying
+  const { tokensReceived: tokensReceivedForBuy, feeAmount: buyFeeAmount } = useTokensForBNB(effectiveCurveAddress, buyAmount)
+  
+  // Get accurate price impact
+  const { priceImpact: buyPriceImpact } = usePriceImpact(effectiveCurveAddress, buyAmount, "buy")
+  const { priceImpact: sellPriceImpact } = usePriceImpact(effectiveCurveAddress, sellAmount, "sell")
+
   const calculateMinimumReceived = (amount: string, type: "buy" | "sell") => {
     if (!amount) return "0"
     const numAmount = Number.parseFloat(amount)
-    const p = priceInBase != null && Number.isFinite(priceInBase) ? Number(priceInBase) : undefined
-    if (!p || p <= 0) return "—" // no estimate available
-
+    
     if (type === "buy") {
-      const tokens = numAmount / p
-      const minTokens = tokens * (1 - slippage / 100)
-      return minTokens.toFixed(6)
+      // For buying: amount is in BNB, calculate tokens received using bonding curve math
+      if (!tokensReceivedForBuy || tokensReceivedForBuy <= 0) return "—"
+      
+      const minTokens = tokensReceivedForBuy * (1 - slippage / 100)
+      return minTokens.toLocaleString(undefined, { maximumFractionDigits: 6 })
     } else {
-      const baseOut = numAmount * p
-      const minBase = baseOut * (1 - slippage / 100)
-      return minBase.toFixed(6)
+      // For selling: amount is in tokens, calculate BNB received
+      const totalValue = sellPriceInBNB
+      if (!totalValue || totalValue <= 0) return "—"
+      
+      // totalValue is the total BNB value for the token amount
+      const bnbReceived = totalValue
+      const minBnb = bnbReceived * (1 - slippage / 100)
+      return minBnb.toLocaleString(undefined, { maximumFractionDigits: 6 })
     }
   }
 
@@ -127,14 +216,40 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
     }
   }
 
-  const calculatePriceImpact = (amount: string) => {
-    if (!amount) return 0
-    const numAmount = Number.parseFloat(amount)
-    // Simulate price impact based on trade size
-    return Math.min(numAmount * 0.1, 15) // Max 15% impact
+  const getPriceImpact = (type: "buy" | "sell") => {
+    if (type === "buy") {
+      return buyPriceImpact
+    } else {
+      return sellPriceImpact
+    }
+  }
+
+  const proceedWithTransaction = (normalized: string) => {
+    const transaction = {
+      type: "buy" as const,
+      tokenName,
+      tokenTicker,
+      amount: `${normalized} ${baseSymbol}`,
+      price: currentPrice,
+      slippage,
+      estimatedGas: "—",
+      minimumReceived: `${calculateMinimumReceived(normalized, "buy")} ${tokenTicker}`,
+      priceImpact: getPriceImpact("buy"),
+    }
+
+    setCurrentTransaction(transaction)
+    setShowConfirmation(true)
+    setTransactionStatus(null)
   }
 
   const handleBuy = () => {
+    if (isOnPancakeSwap) {
+      toast.info("🎉 Trading Complete!", {
+        description: `${tokenTicker} is now live on PancakeSwap! Continue trading on the DEX for the best liquidity and price discovery.`,
+        duration: 5000,
+      })
+      return
+    }
     if (!isWalletConnected) {
       toast.error("Please connect your wallet first")
       return
@@ -145,7 +260,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
     }
     const normalized = normalizeAmount(buyAmount)
     if (!isValidDecimal(normalized)) {
-      setBuyError("Enter a valid amount greater than 0 with up to 18 decimals")
+      setBuyError("Enter a valid amount greater than 0 with up to: 18 decimals")
       return
     }
     // Optional balance check
@@ -155,24 +270,18 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
       return
     }
 
-    const transaction = {
-      type: "buy" as const,
-      tokenName,
-      tokenTicker,
-      amount: `${normalized} ${baseSymbol}`,
-      price: currentPrice,
-      slippage,
-      estimatedGas: "—",
-      minimumReceived: `${calculateMinimumReceived(normalized, "buy")} ${tokenTicker}`,
-      priceImpact: calculatePriceImpact(normalized),
-    }
-
-    setCurrentTransaction(transaction)
-    setShowConfirmation(true)
-    setTransactionStatus(null)
+    // Threshold validation
+    handleThresholdValidation(normalized)
   }
 
   const handleSell = async () => {
+    if (isOnPancakeSwap) {
+      toast.info("🎉 Trading Complete!", {
+        description: `${tokenTicker} is now live on PancakeSwap! Continue trading on the DEX for the best liquidity and price discovery.`,
+        duration: 5000,
+      })
+      return
+    }
     if (!isWalletConnected) {
       toast.error("Please connect your wallet first")
       return
@@ -227,7 +336,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
       slippage,
       estimatedGas: "—",
       minimumReceived: `${calculateMinimumReceived(normalized, "sell")} ${baseSymbol}`,
-      priceImpact: 0,
+      priceImpact: getPriceImpact("sell"),
     }
 
     setCurrentTransaction(transaction)
@@ -236,7 +345,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
   }
 
   const confirmTransaction = async () => {
-    if (!curveAddress) {
+    if (!effectiveCurveAddress) {
       toast.error("Bonding curve address not available")
       return
     }
@@ -250,7 +359,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
         const amountIn = parseUnits(normalized, tokenDecimals)
 
         // Check allowance
-        let allowance: bigint = 0n
+        let allowance: bigint = BigInt(0)
         if (address) {
           try {
             allowance = await publicClient!.readContract({
@@ -259,7 +368,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                 { name: "allowance", type: "function", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ type: "uint256" }] },
               ] as const,
               functionName: "allowance",
-              args: [address as `0x${string}`, curveAddress as `0x${string}`],
+              args: [address as `0x${string}`, effectiveCurveAddress as `0x${string}`],
             })
           } catch {}
         }
@@ -272,12 +381,12 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
               { name: "approve", type: "function", stateMutability: "nonpayable", inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "bool" }] },
             ] as const,
             functionName: "approve",
-            args: [curveAddress as `0x${string}`, amountIn],
+            args: [effectiveCurveAddress as `0x${string}`, amountIn],
           })
         }
 
         const sellHash = await writeContractAsync({
-          address: curveAddress as `0x${string}`,
+          address: effectiveCurveAddress as `0x${string}`,
           abi: BondingCurveLaunchABI.abi as any,
           functionName: "sell",
           args: [amountIn],
@@ -288,8 +397,13 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
         if (receipt.status === "success") {
           setTransactionStatus("success")
           setSellAmount("")
+          // Invalidate all relevant queries to refresh UI data silently
           queryClient.invalidateQueries({ queryKey: ["tokenDetail"] })
           queryClient.invalidateQueries({ queryKey: ["tokenCandles"] })
+          queryClient.invalidateQueries({ queryKey: ["currentPrice"] })
+          queryClient.invalidateQueries({ queryKey: ["priceForAmount"] })
+          queryClient.invalidateQueries({ queryKey: ["priceImpact"] })
+          queryClient.invalidateQueries({ queryKey: ["tokensForLanding"] })
           toast.success("Sell transaction confirmed")
         } else {
           setTransactionStatus("error")
@@ -305,9 +419,10 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
           return
         }
         const buyHash = await writeContractAsync({
-          address: curveAddress as `0x${string}`,
+          address: effectiveCurveAddress as `0x${string}`,
           abi: BondingCurveLaunchABI.abi as any,
           functionName: "buy",
+          args: [],
           value,
         })
         setTxHash(buyHash)
@@ -316,8 +431,13 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
         if (receipt.status === "success") {
           setTransactionStatus("success")
           setBuyAmount("")
+          // Invalidate all relevant queries to refresh UI data silently
           queryClient.invalidateQueries({ queryKey: ["tokenDetail"] })
           queryClient.invalidateQueries({ queryKey: ["tokenCandles"] })
+          queryClient.invalidateQueries({ queryKey: ["currentPrice"] })
+          queryClient.invalidateQueries({ queryKey: ["priceForAmount"] })
+          queryClient.invalidateQueries({ queryKey: ["priceImpact"] })
+          queryClient.invalidateQueries({ queryKey: ["tokensForLanding"] })
           toast.success("Buy transaction confirmed")
         } else {
           setTransactionStatus("error")
@@ -347,20 +467,21 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
         publicClient.getGasPrice(),
       ])
       // Try to estimate gas for buy with tiny value; fallback to 250k if estimation fails
-      let gasLimit = 250000n
+      let gasLimit = BigInt(250000)
       try {
         const est = await publicClient.estimateContractGas({
-          address: curveAddress as `0x${string}`,
+          address: effectiveCurveAddress as `0x${string}`,
           abi: BondingCurveLaunchABI.abi as any,
           functionName: "buy",
-          value: 1n, // minimal value just for estimation; may be ignored by contract
+          args: [],
+          value: BigInt(1), // minimal value just for estimation; may be ignored by contract
           account: address as `0x${string}`,
         })
         // add a little buffer
-        gasLimit = est + 20000n
+        gasLimit = est + BigInt(20000)
       } catch {}
       const bufferWei = gasPrice * gasLimit
-      const maxWei = balWei > bufferWei ? balWei - bufferWei : 0n
+      const maxWei = balWei > bufferWei ? balWei - bufferWei : BigInt(0)
       const max = Number(formatEther(maxWei))
       const clamped = max > 0 ? max.toFixed(6) : "0"
       setBuyAmount(clamped)
@@ -517,6 +638,45 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                         ))}
                       </motion.div>
 
+                      {/* Threshold Information */}
+                      {threshold > 0 && !thresholdLoading && (
+                        <motion.div
+                          className="rounded-lg bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-700 p-3 border-2"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.4 }}
+                        >
+                          <div className="flex items-center gap-2 text-sm">
+                            <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-blue-900 dark:text-blue-100 font-semibold">
+                              Liquidity Threshold
+                            </span>
+                          </div>
+                          <p className="text-sm text-blue-800 dark:text-blue-200 mt-2 font-medium">
+                            Once {threshold.toFixed(4)} {baseSymbol} is raised, liquidity will be created on PancakeSwap and trading becomes unrestricted.
+                          </p>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
+                              <span>Current Progress</span>
+                              <span className="font-semibold">
+                                {/* This will be populated with real balance data in the full implementation */}
+                                0.0% Complete
+                              </span>
+                            </div>
+                            <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2">
+                              <div 
+                                className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                                style={{ width: '0%' }} // This would be calculated from actual balance/threshold
+                              ></div>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+                              <div className="w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                              <span>Threshold: {threshold.toFixed(4)} {baseSymbol}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
                       <motion.div
                         className="flex justify-between text-sm text-muted-foreground"
                         initial={{ opacity: 0 }}
@@ -534,7 +694,19 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                         </motion.span>
                       </motion.div>
                       {buyError && (
-                        <div className="text-xs text-red-400 mt-1">{buyError}</div>
+                        <motion.div 
+                          className="text-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3 mt-2"
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span className="text-red-800 dark:text-red-200 font-medium">
+                              {buyError}
+                            </span>
+                          </div>
+                        </motion.div>
                       )}
                       {!isCorrectNetwork && isWalletConnected && (
                         <div className="mt-2 flex items-center justify-between rounded-md border border-yellow-500/30 bg-yellow-500/10 p-2">
@@ -551,10 +723,6 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
 
                     <motion.div className="space-y-2" variants={staggerItem}>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Price per token:</span>
-                        <span className="text-foreground">{currentPrice}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Slippage tolerance:</span>
                         <span className="text-foreground">{slippage}%</span>
                       </div>
@@ -564,10 +732,22 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                       <motion.div variants={buttonGlow} initial="initial" whileHover="hover" whileTap="tap">
                         <Button
                           onClick={handleBuy}
-                          disabled={!buyAmount || !!buyError || !isWalletConnected || !isCorrectNetwork || !curveAddress}
-                          className="w-full bg-green-500 hover:bg-green-600 text-white"
+                          disabled={!isOnPancakeSwap && (!buyAmount || !!buyError || !isWalletConnected || !isCorrectNetwork || !effectiveCurveAddress)}
+                          className="w-full bg-green-500 hover:bg-green-600 text-white disabled:bg-muted disabled:text-muted-foreground"
                         >
-                          {isWalletConnected ? (isCorrectNetwork ? `Buy ${tokenTicker}` : "Wrong Network") : "Connect Wallet to Buy"}
+                          {isOnPancakeSwap
+                            ? "Trade on PancakeSwap"
+                            : !isWalletConnected 
+                            ? "Connect Wallet to Buy"
+                            : !isCorrectNetwork 
+                            ? "Wrong Network" 
+                            : !effectiveCurveAddress
+                            ? "Loading..."
+                            : !buyAmount
+                            ? "Enter Amount"
+                            : !!buyError
+                            ? "Fix Error"
+                            : `Buy ${tokenTicker}`}
                         </Button>
                       </motion.div>
                     </motion.div>
@@ -661,10 +841,6 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
 
                     <motion.div className="space-y-2" variants={staggerItem}>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Price per token:</span>
-                        <span className="text-foreground">{formatPricePerToken(currentPrice)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Slippage tolerance:</span>
                         <span className="text-foreground">{slippage}%</span>
                       </div>
@@ -674,10 +850,22 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                       <motion.div variants={buttonGlow} initial="initial" whileHover="hover" whileTap="tap">
                         <Button
                           onClick={handleSell}
-                          disabled={!sellAmount || !!sellError || !isWalletConnected || !isCorrectNetwork || !curveAddress}
-                          className="w-full bg-red-500 hover:bg-red-600 text-white"
+                          disabled={!isOnPancakeSwap && (!sellAmount || !!sellError || !isWalletConnected || !isCorrectNetwork || !effectiveCurveAddress)}
+                          className="w-full bg-red-500 hover:bg-red-600 text-white disabled:bg-muted disabled:text-muted-foreground"
                         >
-                          {isWalletConnected ? (isCorrectNetwork ? `Sell ${tokenTicker}` : "Wrong Network") : "Connect Wallet to Sell"}
+                          {isOnPancakeSwap
+                            ? "Trade on PancakeSwap"
+                            : !isWalletConnected 
+                            ? "Connect Wallet to Sell"
+                            : !isCorrectNetwork 
+                            ? "Wrong Network" 
+                            : !effectiveCurveAddress
+                            ? "Loading..."
+                            : !sellAmount
+                            ? "Enter Amount"
+                            : !!sellError
+                            ? "Fix Error"
+                            : `Sell ${tokenTicker}`}
                         </Button>
                       </motion.div>
                     </motion.div>
@@ -712,27 +900,6 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
               </div>
             </motion.div>
 
-            <motion.div
-              className="mt-2 flex items-center justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-            >
-              <motion.div variants={buttonPress} whileHover="hover" whileTap="tap">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  onClick={handleRefreshPrice}
-                  disabled={isRefreshing}
-                >
-                  <motion.div animate={isRefreshing ? "animate" : ""} variants={spinnerRotate}>
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                  </motion.div>
-                  Refresh Price
-                </Button>
-              </motion.div>
-            </motion.div>
           </CardContent>
         </Card>
       </motion.div>

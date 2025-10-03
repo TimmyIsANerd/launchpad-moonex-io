@@ -5,32 +5,48 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { MessageCircle, Send, Users, Clock } from "lucide-react"
 import type { TradeItem } from "@/src/types/trade"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useChatSession, useRealTimeMessages, usePostMessage } from "@/src/hooks/useChatSession"
 
 interface TradesCommentsProps {
   tokenTicker: string
+  tokenAddress?: string
   isWalletConnected?: boolean
   trades?: TradeItem[]
 }
 
-export function TradesComments({ tokenTicker, isWalletConnected = false, trades = [] }: TradesCommentsProps) {
+export function TradesComments({ 
+  tokenTicker, 
+  tokenAddress, 
+  isWalletConnected = false, 
+  trades = [] 
+}: TradesCommentsProps) {
   const [comment, setComment] = useState("")
-  const [comments, setComments] = useState<Array<{ id: string; user: string; text: string; timestamp: string }>>([])
+  
+  // Chat session hooks
+  const { session, isLoading: sessionLoading } = useChatSession(tokenAddress || '')
+  const { messages, meta, isLoading: messagesLoading } = useRealTimeMessages(
+    session?.sessionId || '',
+    1,
+    50
+  )
+  const { postMessage, isLoading: postingMessage } = usePostMessage(session?.sessionId || '')
 
   const postComment = () => {
-    if (!comment.trim()) return
-    // Local-only mock; replace with backend or on-chain comments later
-    setComments((prev) => [
-      {
-        id: Math.random().toString(36).slice(2),
-        user: "you",
-        text: comment.trim(),
-        timestamp: new Date().toLocaleString(),
+    if (!comment.trim() || !session?.sessionId) return
+    
+    postMessage({
+      message: comment.trim()
+    }, {
+      onSuccess: () => {
+        setComment("")
       },
-      ...prev,
-    ])
-    setComment("")
+      onError: (error) => {
+        console.error('Failed to post message:', error)
+      }
+    })
   }
 
   const shorten = (addr: string) => (addr.length > 10 ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : addr)
@@ -94,9 +110,13 @@ export function TradesComments({ tokenTicker, isWalletConnected = false, trades 
                   className="min-h-[80px]"
                 />
                 <div className="flex items-center gap-2">
-                  <Input placeholder="Optional username (local only)" disabled className="max-w-xs" />
-                  <Button onClick={postComment} disabled={!comment.trim()}>
-                    Post
+                  <Button 
+                    onClick={postComment} 
+                    disabled={!comment.trim() || postingMessage}
+                    className="flex items-center gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    {postingMessage ? 'Posting...' : 'Post'}
                   </Button>
                 </div>
               </div>
@@ -109,17 +129,64 @@ export function TradesComments({ tokenTicker, isWalletConnected = false, trades 
               </div>
             )}
 
-            <div className="space-y-2">
-              {comments.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No comments yet.</div>
+            {/* Chat Session Info */}
+            {session && meta && (
+              <div className="flex items-center justify-between rounded-lg border border-border bg-blue-50 dark:bg-blue-950/20 p-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    <span>{meta.session.participantCount} participants</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <MessageCircle className="h-3 w-3" />
+                    <span>{meta.session.messageCount} messages</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>Live chat</span>
+                </div>
+              </div>
+            )}
+
+            {/* Loading State */}
+            {messagesLoading && (
+              <div className="flex justify-center py-4">
+                <div className="text-sm text-muted-foreground">Loading chat messages...</div>
+              </div>
+            )}
+
+            {/* Messages */}
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {messages.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  {sessionLoading ? 'Creating chat session...' : 'No messages yet. Start the conversation!'}
+                </div>
               ) : (
-                comments.map((c) => (
-                  <div key={c.id} className="rounded-lg border border-border bg-card/50 p-3">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{c.user}</span>
-                      <span>{c.timestamp}</span>
+                messages.map((message) => (
+                  <div key={message._id} className="rounded-lg border border-border bg-card/50 p-3">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {message.userProfile.username || shorten(message.userProfile.address)}
+                        </span>
+                        <span className="px-1 py-0.5 bg-muted rounded text-[10px]">
+                          {shorten(message.userProfile.address)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{new Date(message.messageTime).toLocaleString()}</span>
+                      </div>
                     </div>
-                    <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{c.text}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                      {message.message}
+                    </p>
+                    {message.isEdited && (
+                      <div className="text-[10px] text-muted-foreground mt-1 italic">
+                        edited {new Date(message.editedAt!).toLocaleString()}
+                      </div>
+                    )}
                   </div>
                 ))
               )}

@@ -38,6 +38,7 @@ export const Q_TOKEN_DETAIL = /* GraphQL */ `
       createdAt
       displayName
       logoURI
+      totalSupply
       stats {
         priceInBase
         volume24hBase
@@ -88,7 +89,7 @@ export const Q_TOKEN_DETAIL = /* GraphQL */ `
 
 export const Q_CANDLES_1M = /* GraphQL */ `
   query Candles1m($token: ID!, $from: BigInt!, $to: BigInt!, $first: Int = 200) {
-    candle1ms(
+    candle1Ms(
       where: { token: $token, startTimestamp_gte: $from, startTimestamp_lte: $to }
       orderBy: startTimestamp
       orderDirection: asc
@@ -109,7 +110,7 @@ export const Q_CANDLES_1M = /* GraphQL */ `
 
 export const Q_CANDLES_5M = /* GraphQL */ `
   query Candles5m($token: ID!, $from: BigInt!, $to: BigInt!, $first: Int = 200) {
-    candle5ms(
+    candle5Ms(
       where: { token: $token, startTimestamp_gte: $from, startTimestamp_lte: $to }
       orderBy: startTimestamp
       orderDirection: asc
@@ -130,7 +131,7 @@ export const Q_CANDLES_5M = /* GraphQL */ `
 
 export const Q_CANDLES_1H = /* GraphQL */ `
   query Candles1h($token: ID!, $from: BigInt!, $to: BigInt!, $first: Int = 200) {
-    candle1hs(
+    candle1Hs(
       where: { token: $token, startTimestamp_gte: $from, startTimestamp_lte: $to }
       orderBy: startTimestamp
       orderDirection: asc
@@ -151,7 +152,7 @@ export const Q_CANDLES_1H = /* GraphQL */ `
 
 export const Q_CANDLES_1D = /* GraphQL */ `
   query Candles1d($token: ID!, $from: BigInt!, $to: BigInt!, $first: Int = 200) {
-    candle1ds(
+    candle1Ds(
       where: { token: $token, startTimestamp_gte: $from, startTimestamp_lte: $to }
       orderBy: startTimestamp
       orderDirection: asc
