@@ -241,24 +241,40 @@ export default function CreateTokenPage() {
       console.log(`Submitting raise amount: ${ethAmount} ETH`)
       console.log(`In Wei (for smart contracts): ${parseEther(ethAmount.toString()).toString()}`)
       
-      const uploadData: LaunchPreparationData = {
+      setCreationPhase('preparing')
+      
+      // Upload logo first if provided
+      let logoUri = null
+      if (formData.logo) {
+        try {
+          console.log('Uploading logo file...')
+          const uploadResult = await moonexApi.uploadFile(formData.logo)
+          logoUri = uploadResult.data[0]?.url
+          console.log('Logo uploaded:', logoUri)
+        } catch (error) {
+          console.warn('Failed to upload logo:', error)
+          // Continue without logo rather than failing
+        }
+      }
+
+      const launchData: LaunchPreparationData = {
         name: formData.name,
         ticker: formData.ticker,
         description: formData.description,
-        raisedToken: formData.raisedToken,
-        raiseAmount: ethAmount, // Send ETH amount for API - smart contracts will need Wei conversion
+        logoUri: logoUri,
+        feeRecipient: formData.feeRecipient,
+        feePercentage: formData.feePercentage,
+        category: formData.category,
         website: formData.website,
         twitter: formData.twitter,
         telegram: formData.telegram,
-        category: formData.category,
-        feeRecipient: formData.feeRecipient,
-        feePercentage: formData.feePercentage,
+        creatorAddress: address || '',
       }
 
-      setCreationPhase('preparing')
+      console.log('Submitting launch data:', launchData)
       
       // Start token creation process
-      const result = await moonexApi.prepareTokenLaunch(uploadData, formData.logo)
+      const result = await moonexApi.prepareLaunch(launchData)
       
       setCreationPhase('deploying')
       
