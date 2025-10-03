@@ -1,7 +1,8 @@
 import { 
   parseEther, 
   formatEther, 
-  encodeBytes32String,
+  keccak256,
+  toHex,
   type Address,
   type Hash
 } from 'viem'
@@ -75,7 +76,7 @@ export function generateUniqueSalt(symbol: string, creatorAddress: Address): Has
   const timestamp = Math.floor(Date.now() / 1000)
   const randomSuffix = Math.random().toString(36).substring(2, 2 + DEFAULT_CONFIG.UNIQUE_SUFFIX_LENGTH)
   const saltString = `${symbol.toUpperCase()}-${timestamp}-${randomSuffix}-${creatorAddress.slice(2, 10)}`
-  return encodeBytes32String(saltString)
+  return keccak256(toHex(saltString))
 }
 
 /**
