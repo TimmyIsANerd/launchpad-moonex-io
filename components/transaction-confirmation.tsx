@@ -24,6 +24,7 @@ interface TransactionDetails {
   estimatedGas: string
   minimumReceived: string
   priceImpact: number
+  tradingFee?: string
 }
 
 interface TransactionConfirmationProps {
@@ -139,6 +140,8 @@ export function TransactionConfirmation({
                   </motion.div>
 
 
+
+
                   <motion.div className="flex justify-between items-center" variants={staggerItem}>
                     <span className="text-muted-foreground">Slippage:</span>
                     <span className="font-medium text-foreground">{transaction.slippage}%</span>
@@ -147,6 +150,11 @@ export function TransactionConfirmation({
                   <motion.div className="flex justify-between items-center" variants={staggerItem}>
                     <span className="text-muted-foreground">Minimum Received:</span>
                     <span className="font-medium text-foreground">{transaction.minimumReceived}</span>
+                  </motion.div>
+
+                  <motion.div className="flex justify-between items-center" variants={staggerItem}>
+                    <span className="text-muted-foreground">Trading Fee:</span>
+                    <span className="font-medium text-foreground">{transaction.tradingFee || "1.5%"}</span>
                   </motion.div>
 
                   <motion.div variants={staggerItem}>
