@@ -11,7 +11,7 @@ import { MultistepTokenForm } from "@/components/multistep-token-form"
 import { useWallet } from "@/components/wallet-provider"
 import { Wallet, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
-import { moonexApi, type LaunchPreparationData } from "@/lib/Moonex-api"
+import { moonexApi, type LaunchPreparationData } from "@/lib/moonex-api"
 
 interface TokenFormData {
   logo: File | null
