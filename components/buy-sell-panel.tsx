@@ -21,6 +21,9 @@ import { usePriceForAmount } from "@/src/hooks/usePriceForAmount"
 import { usePriceImpact } from "@/src/hooks/usePriceImpact"
 import { useTokensForBNB } from "@/src/hooks/useTokensForBNB"
 import { useThresholdValidation, validatePurchaseAmount } from "@/src/hooks/useThresholdValidation"
+import { useCurrentPrice } from "@/src/hooks/useCurrentPrice"
+import { useContractBalance } from "@/src/hooks/useContractBalance"
+import { useTradingFee } from "@/src/hooks/useTradingFee"
 
 interface BuySellPanelProps {
   tokenName: string
@@ -70,55 +73,22 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
   const buyPresets = ["0.1", "0.5", "1"]
 
   // Threshold validation function
-  const handleThresholdValidation = async (purchaseAmount: string) => {
-    if (!effectiveCurveAddress || !publicClient) {
-      setBuyError("Contract not available for validation")
+  const handleThresholdValidation = (purchaseAmount: string) => {
+    if (liquidityCreated) {
+      setBuyError("Liquidity has already been created. Trading is now on PancakeSwap.")
       return
     }
 
-    try {
-      // Get current contract balance
-      const currentBalanceWei = await publicClient.getBalance({
-        address: effectiveCurveAddress as `0x${string}`
-      })
-      const currentBalanceBNB = Number(formatEther(currentBalanceWei))
-
-      // Get threshold
-      const thresholdWei = await publicClient.readContract({
-        address: effectiveCurveAddress as `0x${string}`,
-        abi: BondingCurveLaunchABI.abi,
-        functionName: "lpThreshold",
-      })
-      const thresholdBNB = Number(formatEther(thresholdWei as bigint))
-
-      // Get liquidity creation status
-      const liquidityCreated = await publicClient.readContract({
-        address: effectiveCurveAddress as `0x${string}`,
-        abi: BondingCurveLaunchABI.abi,
-        functionName: "liquidityCreated",
-      })
-
-      const purchaseAmountBNB = Number(purchaseAmount)
-      
-      const validation = validatePurchaseAmount(
-        purchaseAmountBNB,
-        currentBalanceBNB,
-        thresholdBNB,
-        liquidityCreated as boolean
-      )
-
-      if (!validation.isValid) {
-        setBuyError(validation.errorMessage || "Purchase validation failed")
-        return
-      }
-
-      // If validation passes, continue with transaction setup
-      proceedWithTransaction(purchaseAmount)
-
-    } catch (error) {
-      console.error("Threshold validation error:", error)
-      setBuyError("Failed to validate purchase against threshold")
+    const purchaseAmountBNB = Number(purchaseAmount)
+    
+    // Check if purchase would exceed threshold
+    if (currentBalance + purchaseAmountBNB > threshold) {
+      setBuyError(`Purchase would exceed liquidity threshold. Maximum allowed: ${(threshold - currentBalance).toFixed(6)} BNB`)
+      return
     }
+
+    // If validation passes, continue with transaction setup
+    proceedWithTransaction(purchaseAmount)
   }
   const sellPresets = [25, 50, 75, 100]
 
@@ -131,10 +101,12 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
   // Fallback to test curve address if GraphQL doesn't provide it
   const effectiveCurveAddress = curveAddress || "0x8834f5fC7c4e97a88c2548E403e49312adE47b16"
   
-  // Threshold validation hook
-  const { threshold, isLoading: thresholdLoading } = useThresholdValidation(effectiveCurveAddress, buyAmount)
+  // Get real-time contract data
+  const { priceInBNB: currentPriceFromContract } = useCurrentPrice(effectiveCurveAddress)
+  const { currentBalance, threshold, progressPercentage, liquidityCreated } = useContractBalance(effectiveCurveAddress)
+  const { feeRate } = useTradingFee(effectiveCurveAddress)
   
-  // Get accurate price for the current buy amount
+  // Get accurate price for the current sell amount (tokens -> BNB)
   const { priceInBNB: sellPriceInBNB } = usePriceForAmount(effectiveCurveAddress, sellAmount)
   
   // Get accurate tokens received for BNB amount when buying
@@ -146,22 +118,21 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
 
   const calculateMinimumReceived = (amount: string, type: "buy" | "sell") => {
     if (!amount) return "0"
-    const numAmount = Number.parseFloat(amount)
     
     if (type === "buy") {
-      // For buying: amount is in BNB, calculate tokens received using bonding curve math
+      // For buying: amount is in BNB, calculate tokens received using accurate contract math
       if (!tokensReceivedForBuy || tokensReceivedForBuy <= 0) return "—"
       
       const minTokens = tokensReceivedForBuy * (1 - slippage / 100)
       return minTokens.toLocaleString(undefined, { maximumFractionDigits: 6 })
     } else {
-      // For selling: amount is in tokens, calculate BNB received
-      const totalValue = sellPriceInBNB
-      if (!totalValue || totalValue <= 0) return "—"
+      // For selling: amount is in tokens, calculate BNB received using contract's getPriceForAmount
+      if (!sellPriceInBNB || sellPriceInBNB <= 0) return "—"
       
-      // totalValue is the total BNB value for the token amount
-      const bnbReceived = totalValue
-      const minBnb = bnbReceived * (1 - slippage / 100)
+      // Apply trading fee (same as contract logic)
+      const tradingFeeRate = feeRate || 0.015 // Use contract fee or fallback to 1.5%
+      const bnbAfterFee = sellPriceInBNB * (1 - tradingFeeRate)
+      const minBnb = bnbAfterFee * (1 - slippage / 100)
       return minBnb.toLocaleString(undefined, { maximumFractionDigits: 6 })
     }
   }
@@ -225,16 +196,20 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
   }
 
   const proceedWithTransaction = (normalized: string) => {
+    const tradingFeeRate = feeRate || 0.015
     const transaction = {
       type: "buy" as const,
       tokenName,
       tokenTicker,
       amount: `${normalized} ${baseSymbol}`,
-      price: currentPrice,
+      price: "", // Remove price display
       slippage,
-      estimatedGas: "—",
-      minimumReceived: `${calculateMinimumReceived(normalized, "buy")} ${tokenTicker}`,
+      estimatedGas: "~0.002 BNB",
+      minimumReceived: tokensReceivedForBuy 
+        ? `${(tokensReceivedForBuy * (1 - slippage / 100)).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${tokenTicker}`
+        : "—",
       priceImpact: getPriceImpact("buy"),
+      tradingFee: `${(tradingFeeRate * 100).toFixed(1)}%`,
     }
 
     setCurrentTransaction(transaction)
@@ -327,16 +302,20 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
       // if balance check fails, continue without blocking
     }
 
+    const tradingFeeRate = feeRate || 0.015
     const transaction = {
       type: "sell" as const,
       tokenName,
       tokenTicker,
       amount: `${normalized} ${tokenTicker}`,
-      price: currentPrice,
+      price: "", // Remove price display
       slippage,
-      estimatedGas: "—",
-      minimumReceived: `${calculateMinimumReceived(normalized, "sell")} ${baseSymbol}`,
+      estimatedGas: "~0.002 BNB",
+      minimumReceived: sellPriceInBNB 
+        ? `${(sellPriceInBNB * (1 - tradingFeeRate) * (1 - slippage / 100)).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${baseSymbol}`
+        : "—",
       priceImpact: getPriceImpact("sell"),
+      tradingFee: `${(tradingFeeRate * 100).toFixed(1)}%`,
     }
 
     setCurrentTransaction(transaction)
@@ -638,44 +617,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                         ))}
                       </motion.div>
 
-                      {/* Threshold Information */}
-                      {threshold > 0 && !thresholdLoading && (
-                        <motion.div
-                          className="rounded-lg bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-700 p-3 border-2"
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.4 }}
-                        >
-                          <div className="flex items-center gap-2 text-sm">
-                            <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            <span className="text-blue-900 dark:text-blue-100 font-semibold">
-                              Liquidity Threshold
-                            </span>
-                          </div>
-                          <p className="text-sm text-blue-800 dark:text-blue-200 mt-2 font-medium">
-                            Once {threshold.toFixed(4)} {baseSymbol} is raised, liquidity will be created on PancakeSwap and trading becomes unrestricted.
-                          </p>
-                          <div className="mt-3 space-y-2">
-                            <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
-                              <span>Current Progress</span>
-                              <span className="font-semibold">
-                                {/* This will be populated with real balance data in the full implementation */}
-                                0.0% Complete
-                              </span>
-                            </div>
-                            <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2">
-                              <div 
-                                className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
-                                style={{ width: '0%' }} // This would be calculated from actual balance/threshold
-                              ></div>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
-                              <div className="w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
-                              <span>Threshold: {threshold.toFixed(4)} {baseSymbol}</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
+
 
                       <motion.div
                         className="flex justify-between text-sm text-muted-foreground"
@@ -690,7 +632,7 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2 }}
                         >
-                          ≈ {buyAmount ? calculateMinimumReceived(buyAmount, "buy") : "—"} {tokenTicker}
+                          ≈ {buyAmount && tokensReceivedForBuy ? tokensReceivedForBuy.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—"} {tokenTicker}
                         </motion.span>
                       </motion.div>
                       {buyError && (
@@ -834,7 +776,9 @@ export function BuySellPanel({ tokenName, tokenTicker, currentPrice, isWalletCon
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2 }}
                         >
-                          ≈ {sellAmount ? calculateMinimumReceived(sellAmount, "sell") : "—"} {baseSymbol}
+                          ≈ {sellAmount && sellPriceInBNB ? 
+                            (sellPriceInBNB * (1 - (feeRate || 0.015))).toLocaleString(undefined, { maximumFractionDigits: 6 }) 
+                            : "—"} {baseSymbol}
                         </motion.span>
                       </motion.div>
                     </motion.div>
