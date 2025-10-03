@@ -23,18 +23,7 @@ export function EnhancedStepIndicator({ steps, currentStep, onStepClick }: Enhan
     <div className="w-full">
       {/* Desktop Layout - Modern Horizontal Stepper */}
       <div className="hidden lg:block">
-        <div className="relative bg-gradient-to-r from-background via-muted/20 to-background rounded-2xl p-8 border border-border/50 shadow-sm">
-          {/* Background Progress Line */}
-          <div className="absolute top-1/2 left-8 right-8 h-px bg-border/30 -translate-y-1/2" />
-          
-          {/* Active Progress Line */}
-          <motion.div 
-            className="absolute top-1/2 left-8 h-px bg-gradient-to-r from-primary to-secondary -translate-y-1/2 shadow-sm"
-            initial={{ width: 0 }}
-            animate={{ width: `${progressPercentage}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          />
-
+        <div className="relative bg-card rounded-2xl p-8 border border-border/50 shadow-sm">
           <div className="relative flex justify-between items-center">
             {steps.map((step, index) => {
               const stepNumber = index + 1
@@ -58,10 +47,10 @@ export function EnhancedStepIndicator({ steps, currentStep, onStepClick }: Enhan
                     className={`
                       relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg
                       ${isCompleted 
-                        ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-primary/25' 
+                        ? 'bg-gradient-to-br from-primary to-secondary text-white glow-cyan' 
                         : isCurrent 
-                          ? 'bg-gradient-to-br from-primary/10 to-secondary/10 border-2 border-primary text-primary shadow-primary/20' 
-                          : 'bg-background border-2 border-border text-muted-foreground hover:border-primary/30'
+                          ? 'bg-card border-2 border-primary text-primary glow-cyan' 
+                          : 'bg-card border-2 border-border text-muted hover:border-primary/50'
                       }
                     `}
                     whileHover={isClickable ? { scale: 1.05, y: -2 } : {}}
@@ -171,9 +160,9 @@ export function EnhancedStepIndicator({ steps, currentStep, onStepClick }: Enhan
           </div>
           
           {/* Progress Bar */}
-          <div className="w-full bg-muted/30 rounded-full h-2 mb-6 overflow-hidden">
+          <div className="w-full bg-border/30 rounded-full h-2 mb-6 overflow-hidden">
             <motion.div 
-              className="bg-gradient-to-r from-primary to-secondary h-full rounded-full shadow-sm"
+              className="gradient-cosmic h-full rounded-full shadow-sm glow-cyan"
               initial={{ width: 0 }}
               animate={{ width: `${progressPercentage}%` }}
               transition={{ duration: 0.8, ease: "easeOut" }}
@@ -194,14 +183,14 @@ export function EnhancedStepIndicator({ steps, currentStep, onStepClick }: Enhan
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.05 }}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all whitespace-nowrap ${
-                    isCurrent ? 'bg-primary/10 border border-primary/20' : 
-                    isCompleted ? 'bg-muted/50' : 'bg-muted/30'
+                    isCurrent ? 'bg-primary/10 border border-primary/30 glow-cyan' : 
+                    isCompleted ? 'bg-card border border-primary/20' : 'bg-card border border-border'
                   } ${isClickable ? 'cursor-pointer hover:bg-primary/5' : ''}`}
                   onClick={() => isClickable && onStepClick(index)}
                 >
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
-                    isCompleted ? 'bg-primary text-white' :
-                    isCurrent ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                    isCompleted ? 'bg-gradient-to-br from-primary to-secondary text-white' :
+                    isCurrent ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-border text-muted-foreground'
                   }`}>
                     {isCompleted ? <Check className="h-3 w-3" /> : index + 1}
                   </div>
@@ -240,9 +229,9 @@ export function EnhancedStepIndicator({ steps, currentStep, onStepClick }: Enhan
           
           {/* Enhanced Progress Bar */}
           <div className="relative mb-6">
-            <div className="w-full bg-muted/30 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-border/30 rounded-full h-3 overflow-hidden">
               <motion.div 
-                className="bg-gradient-to-r from-primary via-primary to-secondary h-full rounded-full shadow-sm relative"
+                className="gradient-cosmic h-full rounded-full shadow-sm relative glow-cyan"
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercentage}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
@@ -259,7 +248,7 @@ export function EnhancedStepIndicator({ steps, currentStep, onStepClick }: Enhan
           {/* Current Step Icon */}
           <div className="text-center mb-6">
             <motion.div
-              className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center border-2 border-primary/20 shadow-lg"
+              className="mx-auto w-16 h-16 bg-card rounded-2xl flex items-center justify-center border-2 border-primary shadow-lg glow-cyan"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5 }}
@@ -289,18 +278,18 @@ export function EnhancedStepIndicator({ steps, currentStep, onStepClick }: Enhan
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
                   className={`flex items-center space-x-3 p-3 rounded-xl transition-all ${
-                    isCurrent ? 'bg-primary/5 border border-primary/20' :
-                    isCompleted ? 'bg-muted/30' : 'bg-muted/20'
+                    isCurrent ? 'bg-primary/10 border border-primary/30 glow-cyan' :
+                    isCompleted ? 'bg-card border border-primary/20' : 'bg-card border border-border'
                   } ${isClickable ? 'cursor-pointer hover:bg-primary/10' : ''}`}
                   onClick={() => isClickable && onStepClick(index)}
                 >
                   {/* Status Indicator */}
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
                     isCompleted 
-                      ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-md' 
+                      ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-md glow-cyan' 
                       : isCurrent 
-                        ? 'bg-primary/20 text-primary border-2 border-primary/30' 
-                        : 'bg-muted text-muted-foreground border border-border'
+                        ? 'bg-primary/20 text-primary border-2 border-primary' 
+                        : 'bg-border text-muted-foreground border border-border'
                   }`}>
                     {isCompleted ? (
                       <Check className="h-4 w-4" />
